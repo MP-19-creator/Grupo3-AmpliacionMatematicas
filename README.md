@@ -50,5 +50,5 @@ La hoja `ArchivosNecesarios/MUSE_weekly_milestones.pdf` propone ejercicios seman
 2. **Métodos y análisis:** calcula la evolución y estudia su precisión y estabilidad.
 3. **Gráficas e interfaz:** presenta los resultados y permite cambiar los parámetros.
 
-La interfaz conectará las otras capas; las ecuaciones y métodos podrán usarse por separado.
+La interfaz conectará las otras capas; las ecuaciones y métodos podrán usarse por separado
 
