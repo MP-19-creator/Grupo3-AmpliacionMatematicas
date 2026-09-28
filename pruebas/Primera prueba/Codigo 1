@@ -1,0 +1,114 @@
+from numpy import array, zeros, arange, cos, pi, log
+from numpy.linalg import norm
+import matplotlib.pyplot as plt
+
+def F(U):
+  return array([U[1], -U[0]])
+
+tf = 6*pi # Tiempo final
+dt_values = [0.2,0.1,0.05,0.025,0.0125]
+
+U0 = array([1,0]) # Condición inicial
+nv = len(U0)
+
+# Euler explicito
+def euler_exp(F,U0,dt,n,nv):
+  U = zeros((n+1,nv))
+  U[0,:] = U0
+  for i in range(0,n):
+    U[i+1,:] = U[i,:] + dt*F(U[i,:])
+  return U
+
+# Euler implícito
+def euler_imp(F,U0,dt,n,nv):
+  U = zeros((n+1,nv))
+  U[0,:] = U0
+  for i in range(0,n):
+    U[i+1,:] = (U[i,:] + dt*F(U[i,:]))/(1 + dt**2)
+  return U
+
+# Runge-Kutta 4
+def rk4(F,U0,dt,n,nv):
+  U = zeros((n+1,nv))
+  U[0,:] = U0
+  for i in range(0,n):
+    k1 = F(U[i,:])
+    k2 = F(U[i,:] + dt*k1/2)
+    k3 = F(U[i,:] + dt*k2/2)
+    k4 = F(U[i,:] + dt*k3)
+    U[i+1,:] = U[i,:] + dt*(k1+2*k2+2*k3+k4)/6
+  return U
+
+# Crank-Nicolson
+def crank(F,U0,dt,n,nv):
+  U = zeros((n+1,nv))
+  U[0,:] = U0
+  for i in range(0,n):
+    Y = U[i,:]
+    while norm(Y - U[i,:] - dt/2*(F(U[i,:]) + F(Y))) > 1e-10:
+      R = Y - U[i,:] - dt/2*(F(U[i,:]) + F(Y))
+      Y = Y - R
+    U[i+1,:] = Y
+  return U
+
+metodos = {"1": euler_exp,"2": euler_imp,
+           "3": rk4,"4": crank}
+nombres = {"1": "Euler Explícito","2": "Euler Implícito",
+           "3": "Runge-Kutta 4","4": "Crank-Nicolson"}
+plt.figure()
+while True:
+    metodo = input("1. Euler explícito\n"
+                   "2. Euler implícito\n"
+                   "3. Runge Kutta 4\n"
+                   "4. Crank Nicolson\n")
+    if metodo not in ("1","2","3","4"):
+      print("\nElige un número entre 1 y 4:\n")
+    else:
+      for dt in dt_values:
+          n = round(tf/dt)
+          t = dt*arange(n+1)
+          U = metodos[metodo](F,U0,dt,int(n),nv)
+          plt.plot(t,U[:,0],label=fr'$\Delta t = {dt}$')
+          plt.title(nombres[metodo],fontweight='bold')
+      break
+
+# Comparación de soluciones por dt
+t = arange(0,tf+dt_values[-1],dt_values[-1])
+plt.plot(t,cos(t),'k--',label="Exacta")
+plt.legend(loc='upper left')
+plt.xlabel('t')
+plt.ylabel('x(t)',rotation=0)
+plt.grid(True, alpha=0.3)
+
+# Mapa de fases
+plt.figure()
+plt.axis('equal')
+plt.plot(U[:,0],U[:,1])
+plt.plot(U[0,0],U[0,1],'go',markeredgecolor='k',label='Inicio')
+plt.plot(U[-1,0],U[-1,1],'ro',markeredgecolor='k',label='Final')
+plt.title('Mapa de fases',fontweight='bold')
+plt.legend(loc='upper left')
+plt.grid(True,alpha=0.3)
+
+# Comparación de errores
+plt.figure()
+errores_modelos = {}
+orden = {}
+for i in metodos:
+    errores_modelo = []
+    for dt in dt_values:
+        n = round(tf/dt)
+        t = dt*arange(n+1)
+        U = metodos[i](F,U0,dt,int(n),nv)
+        error = max(abs(U[:,0] - cos(t)))
+        errores_modelo.append(error)
+    errores_modelos[i] = errores_modelo
+    # Error(dt)/Error(dt/2) = 2^orden
+    orden[i] = log(errores_modelo[-2]/errores_modelo[-1])/log(2)
+    print(f'Orden calculado del modelo {nombres[i]}:{orden[i]}')
+    plt.loglog(dt_values,errores_modelos[i],'o-',label=nombres[i])
+plt.title('Comparación de errores',fontweight='bold')
+plt.legend(loc='lower right')
+plt.grid(True,alpha=0.3)
+print(f"\nEl orden calculado del modelo elegido es:\nOrden {orden}\n")
+plt.show()
