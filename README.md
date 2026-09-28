@@ -2,7 +2,7 @@
 
 Proyecto de Ampliación de Matemáticas 1 (MUSE - ETSIAE).
 
-Este repositorio está preparado como guía: cada carpeta indica qué trabajo irá en ella. Los archivos de código son plantillas y todavía no implementan los métodos ni la simulación.
+Este repositorio está preparado como guía: cada carpeta indica qué trabajo irá en ella. 
 
 ## ¿Dónde va cada cosa?
 
