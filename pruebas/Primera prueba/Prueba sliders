@@ -23,7 +23,7 @@ t = arange(N+1) * Dt
 
 # Fila superior: w(t). Fila inferior: deriva relativa de 2T
 fig, axs = plt.subplots(2, 3, figsize=(15, 8), sharex=True)
-plt.subplots_adjust(bottom=0.6)
+plt.subplots_adjust(bottom=0.3)
 
 ax_I1 = fig.add_axes([0.15, 0.2, 0.7, 0.03])
 ax_I2 = fig.add_axes([0.15, 0.14, 0.7, 0.03])
