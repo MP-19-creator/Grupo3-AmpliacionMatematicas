@@ -1,6 +1,7 @@
 from numpy import array, zeros, arange
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 from methods import Euler, RK4, Crank_Nicolson
 
 I1 = 1; I2 = 2; I3 = 3
@@ -26,16 +27,18 @@ for j, metodo in enumerate((Euler, RK4, Crank_Nicolson)):
     Us = metodo(U.copy(), F, Dt, N)
     T2 = energia(Us)
 
-    axs[0, j].plot(t, Us[:, 0], label='w1')
-    axs[0, j].plot(t, Us[:, 1], label='w2')
-    axs[0, j].plot(t, Us[:, 2], label='w3')
-    axs[0, j].set_title(metodo.__name__)
-    axs[0, j].legend()
+    axs[0, j].plot(t, Us[:, 0], label=r'$w_1$')
+    axs[0, j].plot(t, Us[:, 1], label=r'$w_2$')
+    axs[0, j].plot(t, Us[:, 2], label=r'$w_3$')
+    axs[0, j].set_title(metodo.__name__,fontweight='bold')
+    axs[0, j].grid(True, alpha=0.2)
+    axs[1, j].grid(True, alpha=0.2)
+    axs[0, j].legend(loc='lower left')
 
     axs[1, j].semilogy(t, abs(T2 - T2[0]) / T2[0])
     axs[1, j].set_xlabel('t')
 
-axs[0, 0].set_ylabel('w')
-axs[1, 0].set_ylabel('|2T - 2T0| / 2T0')
+axs[0, 0].set_ylabel('w', rotation=0)
+axs[1, 0].set_ylabel(r'$\frac{|T_2 - T_{2_0}|}{T_{2_0}}$',rotation=0)
 plt.tight_layout()
 plt.show()
