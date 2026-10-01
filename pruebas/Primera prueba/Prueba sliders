@@ -50,12 +50,14 @@ ax_I1 = fig.add_axes([0.15, 0.22, 0.7, 0.03])
 ax_I2 = fig.add_axes([0.15, 0.17, 0.7, 0.03])
 ax_I3 = fig.add_axes([0.15, 0.12, 0.7, 0.03])
 ax_Omega = fig.add_axes([0.15, 0.07, 0.7, 0.03])
-ax_reset = fig.add_axes([0.43, 0.015, 0.14, 0.035])
+ax_actualizar = fig.add_axes([0.34, 0.015, 0.14, 0.035])
+ax_reset = fig.add_axes([0.52, 0.015, 0.14, 0.035])
 
 slider_I1 = Slider(ax_I1, 'I1', 0.1, 5, valinit=I1_INICIAL)
 slider_I2 = Slider(ax_I2, 'I2', 0.1, 5, valinit=I2_INICIAL)
 slider_I3 = Slider(ax_I3, 'I3', 0.1, 5, valinit=I3_INICIAL)
 slider_Omega = Slider(ax_Omega, 'Omega', 0, 5, valinit=OMEGA_INICIAL)
+boton_actualizar = Button(ax_actualizar, 'Actualizar')
 boton_reset = Button(ax_reset, 'Reiniciar')
 
 
@@ -83,11 +85,11 @@ def actualizar(val):
         axs[0, j].plot(t, Us[:, 2], label=r'$\omega_3$')
         axs[0, j].set_title(metodo.__name__, fontweight='bold')
         axs[0, j].legend(loc='best', fontsize=8)
-        axs[0, j].grid(True)
+        axs[0, j].grid()
 
         axs[1, j].semilogy(t, deriva, color='tab:red')
         axs[1, j].set_xlabel('t')
-        axs[1, j].grid(True)
+        axs[1, j].grid()
 
     axs[0, 0].set_ylabel(r'$\omega$', rotation=0)
     axs[1, 0].set_ylabel(r'$\frac{|E-E_0|}{E_0}$', rotation=0)
@@ -100,12 +102,10 @@ def reiniciar(event):
     slider_I2.reset()
     slider_I3.reset()
     slider_Omega.reset()
+    actualizar(event)
 
 
-slider_I1.on_changed(actualizar)
-slider_I2.on_changed(actualizar)
-slider_I3.on_changed(actualizar)
-slider_Omega.on_changed(actualizar)
+boton_actualizar.on_clicked(actualizar)
 boton_reset.on_clicked(reiniciar)
 
 actualizar(None)
