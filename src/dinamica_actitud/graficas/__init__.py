@@ -1,1 +1,0 @@
-"""Gráficas científicas y animaciones."""

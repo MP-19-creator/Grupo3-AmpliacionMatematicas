@@ -1,3 +1,8 @@
-﻿# Hito 1: primeros métodos
+# Enunciado
 
-En scripts/ van los programas iniciales de Euler, Crank–Nicolson y RK4. En este primer codigo estamos probando a programar con una orbita sencilla como Kepler con los metodos sin crear funciones
+**Milestone 1: Prototypes to integrate orbits without functions.**
+
+1. Write a script to integrate orbits with an Euler method.
+2. Write a script to integrate orbits with a Crank-Nicolson method.
+3. Write a script to integrate orbits with a Runge–Kutta fourth order.
+4. Change time step and plot orbits. Discuss results.

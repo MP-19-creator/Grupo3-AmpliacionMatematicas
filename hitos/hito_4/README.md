@@ -1,3 +1,7 @@
-﻿# Hito 4: estabilidad
+# Enunciado
 
-En scripts/ va la integración del problema lineal y el cálculo de estabilidad para cada método. En esultados/ van las regiones de estabilidad y su comparación con las simulaciones.
+**Milestone 4: Linear problems. Regions of absolute stability.**
+
+1. Integrate a linear problem with some initial conditions. Use Euler, Inverse Euler, Leap–Frog, Crank–Nicolson and fourth order Runge Kutta method.
+2. Regions of absolute stability of the above methods.
+3. Explain the numerical results based on regions of absolute stability.
