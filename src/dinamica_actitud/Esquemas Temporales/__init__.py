@@ -1,1 +1,0 @@
-"""Métodos de integración temporal."""
