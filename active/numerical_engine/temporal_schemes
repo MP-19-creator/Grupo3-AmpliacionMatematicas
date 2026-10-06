@@ -1,6 +1,5 @@
 from numpy.linalg import norm 
 
-
 # Euler explicit
 def Euler(U, dt, t, F): 
     return U + dt * F(U, t)
@@ -30,9 +29,6 @@ def Crank_Nicolson(U, F, dt, t):
         Y = Y - R
         R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
     return Y
-
-
-
 
 # --------- CONVERGENCIA ---------
 def richardson_error(coarse_solution, fine_solution, order):
