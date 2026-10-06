@@ -22,7 +22,7 @@ def RK4(U, dt, t, F):
     return  U + dt * ( k1 + 2*k2 + 2*k3 + k4 )/6
 
 # Crank-Nicolson
-def Crank_Nicolson(U, F, dt, t):
+def Crank_Nicolson(U, dt, t, F):
     Y = U + dt * F(U, t)
     R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
     while norm(R) > 1e-6:
