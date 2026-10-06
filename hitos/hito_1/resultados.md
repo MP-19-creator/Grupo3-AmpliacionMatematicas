@@ -1,4 +1,3 @@
-
 RESULTADOS AL ESTUDIAR ORBITAS DE KEPLER CON METODOS EULER RK4 Y CN SIN FUNCIONES:
 
 Al cambiar el dt se ve claro que cada método se comporta de forma distinta con Euler si usamos un dt grande la órbita se va deformando y acaba alejándose de la trayectoria circular que debería ser. Si hacemos dt más pequeño, el resultado mejora bastante.
