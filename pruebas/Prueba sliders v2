@@ -71,9 +71,9 @@ def actualizar(val):
             return F(estado, inercias)
 
         Us = metodo(U.copy(), campo, DT, N)
-        E = energia(Us, inercias)
-        deriva = abs(E - E[0]) / E[0]
-        deriva = maximum(deriva, 1e-16)
+        # E = energia(Us, inercias)
+        # deriva = abs(E - E[0]) / E[0]
+        # deriva = maximum(deriva, 1e-16)
 
         axs[0, j].clear()
         axs[1, j].clear()
