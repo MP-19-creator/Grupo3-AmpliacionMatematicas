@@ -2,6 +2,10 @@
 def Euler(U, dt, t, F): 
     return U + dt * F(U, t)
 
+# Euler implicit
+def Euler_implicit(U, dt, t, F):
+    return U + dt * F(U + dt * F(U, t), t + dt)
+
 # Runge-Kutta 4th order
 def RK4(U, dt, t, F):
     k1 = F( U, t)
