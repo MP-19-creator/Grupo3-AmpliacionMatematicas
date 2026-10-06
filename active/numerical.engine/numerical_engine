@@ -1,10 +1,18 @@
+from numpy.linalg import norm 
+
+
 # Euler explicit
 def Euler(U, dt, t, F): 
     return U + dt * F(U, t)
 
 # Euler implicit
 def Euler_implicit(U, dt, t, F):
-    return U + dt * F(U + dt * F(U, t), t + dt)
+    Y = U + dt * F(U, t)
+    R = Y - U - dt * F(Y, t + dt)
+    while norm(R) > 1e-6:
+        Y = U + dt * F(Y, t + dt)
+        R = Y - U - dt * F(Y, t + dt)
+    return Y    
 
 # Runge-Kutta 4th order
 def RK4(U, dt, t, F):
@@ -15,8 +23,16 @@ def RK4(U, dt, t, F):
     return  U + dt * ( k1 + 2*k2 + 2*k3 + k4 )/6
 
 # Crank-Nicolson
-def CN2(U, dt, t, F):
-    return U + dt/2 * (F(U, t) + F(U + dt * F(U, t), t + dt))
+def Crank_Nicolson(U, F, dt, t):
+    Y = U + dt * F(U, t)
+    R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
+    while norm(R) > 1e-6:
+        Y = Y - R
+        R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
+    return Y
+
+
+
 
 # --------- CONVERGENCIA ---------
 def richardson_error(coarse_solution, fine_solution, order):
