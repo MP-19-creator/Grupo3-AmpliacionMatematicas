@@ -1,18 +1,14 @@
 from numpy import array, zeros
 import matplotlib.pyplot as plt
 
-N = 100 ; Dt = 0.01 ; Nv = 2
-U = zeros((N+1, Nv))
-U[0, :] = array([1, 0])
+def RK4(U, dt, t, F ): 
 
-def F(U):
-    return array([U[1], -U[0]])
-for n in range(0, N):
-    k1 = F(U[n, :])
-    k2 = F(U[n, :] + (Dt * k1)/2)
-    k3 = F(U[n, :] + (Dt * k2)/2)
-    k4 = F(U[n, :] + Dt * k3)
-    U[n+1, :] = U[n, :] + Dt * (k1 + 2*k2 + 2*k3 + k4)/6
+     k1 = F( U, t)
+     k2 = F( U + dt * k1/2, t + dt/2 )
+     k3 = F( U + dt * k2/2, t + dt/2 )
+     k4 = F( U + dt * k3,   t + dt   )
+ 
+     return  U + dt * ( k1 + 2*k2 + 2*k3 + k4 )/6
 
 plt.plot(U[:, 0], U[:, 1])
 plt.axis('equal')

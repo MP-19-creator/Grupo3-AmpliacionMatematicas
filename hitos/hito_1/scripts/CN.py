@@ -16,6 +16,7 @@ for n in range(0, N):
         Y = Y - R
         R = Y - U[n, :] - Dt/2 * (Fn + F(Y))
     U[n+1, :] = Y
+
     
 plt.plot(U[:, 0], U[:, 1])
 plt.axis('equal')
