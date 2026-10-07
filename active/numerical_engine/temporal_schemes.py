@@ -9,7 +9,7 @@ def Euler_implicit(U, dt, t, F):
     Y = U + dt * F(U, t)
     R = Y - U - dt * F(Y, t + dt)
     while norm(R) > 1e-6:
-        Y = U + dt * F(Y, t + dt)
+        Y = Y - R
         R = Y - U - dt * F(Y, t + dt)
     return Y    
 
