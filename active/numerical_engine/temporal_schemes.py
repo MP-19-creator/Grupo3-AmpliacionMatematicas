@@ -1,17 +1,25 @@
 from numpy.linalg import norm 
+from active.numerical_engine.SistemaEq.NewtonRaphson import Newton
 
 # Euler explicit
 def Euler(U, dt, t, F): 
     return U + dt * F(U, t)
 
-# Euler implicit
+# # Euler implicit
+# def Euler_implicit(U, dt, t, F):
+#     Y = U + dt * F(U, t)
+#     R = Y - U - dt * F(Y, t + dt)
+#     while norm(R) > 1e-6:
+#         Y = Y - R
+#         R = Y - U - dt * F(Y, t + dt)
+#     return Y    
+
+#  Euler implicit
 def Euler_implicit(U, dt, t, F):
-    Y = U + dt * F(U, t)
-    R = Y - U - dt * F(Y, t + dt)
-    while norm(R) > 1e-6:
-        Y = Y - R
-        R = Y - U - dt * F(Y, t + dt)
-    return Y    
+    def G(X):
+        return X - A
+    A = U + dt * F(U, t + dt)
+    return Newton(G, U)
 
 # Runge-Kutta 4th order
 def RK4(U, dt, t, F):
@@ -21,14 +29,21 @@ def RK4(U, dt, t, F):
     k4 = F( U + dt * k3,   t + dt   )
     return  U + dt * ( k1 + 2*k2 + 2*k3 + k4 )/6
 
+# # Crank-Nicolson
+# def Crank_Nicolson(U, dt, t, F):
+#     Y = U + dt * F(U, t)
+#     R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
+#     while norm(R) > 1e-6:
+#         Y = Y - R
+#         R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
+#     return Y
+
 # Crank-Nicolson
 def Crank_Nicolson(U, dt, t, F):
-    Y = U + dt * F(U, t)
-    R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
-    while norm(R) > 1e-6:
-        Y = Y - R
-        R = Y - U - dt/2 * (F(U, t) + F(Y, t + dt))
-    return Y
+    def G(X):
+        return X - A - dt/2 * (F(X, t + dt))
+    A = U + dt/2 * F(U, t)
+    return Newton(G, U)
 
 # --------- CONVERGENCIA ---------
 def richardson_error(coarse_solution, fine_solution, order):

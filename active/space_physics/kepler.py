@@ -1,5 +1,4 @@
 from numpy import array
-from numpy.linalg import norm
 
 def Kepler(U, t):
 
