@@ -1,4 +1,4 @@
-# Capa física (`space.physics`)
+# Capa física (`space_physics`)
 
 Aquí se define el problema: el campo F(U, t), su Jacobiano y las magnitudes que se conservan. No se integra ni se dibujan gráficas aquí.
 
@@ -15,16 +15,9 @@ Los dos se escriben igual, como una función F(U, t), para que el mismo motor nu
 
 El problema es plano y adimensional (μ = 1). El estado es U = (x, y, vx, vy), con r = (x, y) y v = (vx, vy).
 
-Todo está en el archivo `kepler.py`.
+Todo está en el archivo `kepler.py`, que tiene una sola función.
 
-| Función | Qué hace |
-|---|---|
-| `kepler_rhs(U, t)` | El campo F(U, t) del problema de Cauchy. |
-| `kepler_jacobian(U, t)` | El Jacobiano analítico ∂F/∂U. |
-| `specific_energy(U)` | La energía específica E. |
-| `angular_momentum(U)` | El momento angular h. |
-
-### `kepler_rhs(U, t)`
+### `Kepler(U, t)`
 
 Devuelve el segundo miembro del problema de Cauchy dU/dt = F(U, t):
 
@@ -37,30 +30,7 @@ F(U, t) = [ṙ, −r/|r|³] = (vx, vy, −x/|r|³, −y/|r|³)
 - `U` es un único estado `(4,)`, no una trayectoria.
 - El campo no está definido en r = 0: ahí numpy devuelve inf/nan con un aviso.
 
-### `kepler_jacobian(U, t)`
-
-Devuelve el Jacobiano analítico ∂F/∂U, de tamaño 4x4. Por bloques 2x2:
-
-```text
-J = [ 0  I ]        G = (3 r rᵀ − |r|² I) / |r|⁵
-    [ G  0 ]
-```
-
-- Solo depende de la posición; `t` no se usa, igual que en `kepler_rhs`.
-- `U` es un único estado `(4,)`.
-- Como el campo, no está definido en r = 0.
-
-### `specific_energy(U)` y `angular_momentum(U)`
-
-Son las dos magnitudes que se conservan:
-
-```text
-E = |v|²/2 − 1/|r|          energía específica
-h = x·vy − y·vx             momento angular (componente z de r × v)
-```
-
-- Las dos aceptan un estado `(4,)` o una trayectoria `(N+1, 4)` guardada como `U[n, :]`, y devuelven un escalar o un vector `(N+1,)`, respectivamente.
-- El momento angular conserva el signo: h > 0 es giro antihorario.
+No están implementados el Jacobiano analítico ni las magnitudes que se conservan (energía específica y momento angular).
 
 ## Eje intermedio
 
@@ -92,7 +62,7 @@ dU = F(U, t)
 
 - Las inercias entran por fábrica y no como argumento de F. Así F respeta la interfaz F(U, t) del motor numérico y los esquemas temporales no se tocan.
 - Si cambian las inercias (por ejemplo, con los sliders de la GUI), se crea un F nuevo llamando otra vez a `euler_rhs`.
-- El campo es autónomo: `t` no se usa y solo está en la firma para respetar la interfaz F(U, t). En el código tiene valor por defecto 0.0.
+- El campo es autónomo: `t` no se usa y solo está en la firma para respetar la interfaz F(U, t).
 - `U` es un único estado `(3,)`, no una trayectoria.
 - No se comprueba que I₁ < I₂ < I₃: es responsabilidad de quien llama.
 

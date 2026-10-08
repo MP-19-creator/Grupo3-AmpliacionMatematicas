@@ -2,11 +2,11 @@
 
 El enunciado ([`PEI1.pdf`](../ArchivosNecesarios/PEI1.pdf), apartado 3; resumido en [`PEI1/README.md`](../PEI1/README.md)) pide que el programa esté dividido en tres capas separadas. Aquí hay una carpeta por capa:
 
-| Carpeta | Capa | Qué hace |
-|---|---|---|
-| [`space.physics/`](space.physics/) | Física | Define las ecuaciones del problema, su Jacobiano exacto y las magnitudes que se conservan (2T y L²). |
-| [`numerical.engine/`](numerical.engine/) | Matemática y algorítmica | Avanza la solución en el tiempo (Euler, Crank-Nicolson, RK4, paso simple y adaptativo), estima el error con la extrapolación de Richardson y calcula las regiones de estabilidad \|R(z)\| ≤ 1. |
-| [`gui.reactive/`](gui.reactive/) | Visualización | Cuadro de mando interactivo con varios paneles (p. ej. `matplotlib.widgets`). |
+| Carpeta | Capa | Qué debe hacer | Estado |
+|---|---|---|---|
+| [`space_physics/`](space_physics/) | Física | Define las ecuaciones del problema, su Jacobiano exacto y las magnitudes que se conservan (2T y L²). | Hecho para el sólido rígido. |
+| [`numerical_engine/`](numerical_engine/) | Matemática y algorítmica | Avanza la solución en el tiempo (Euler, Crank-Nicolson, RK4, paso simple y adaptativo), estima el error con la extrapolación de Richardson y calcula las regiones de estabilidad \|R(z)\| ≤ 1. | Hay esquemas de un paso (Euler, Euler implícito, Crank-Nicolson, RK4) y el integrador. Faltan el paso adaptativo, Richardson y las regiones de estabilidad. |
+| [`gui_reactive/`](gui_reactive/) | Visualización | Cuadro de mando interactivo con varios paneles (p. ej. `matplotlib.widgets`). | Vacía. |
 
 ## Cómo se relacionan
 

@@ -64,9 +64,9 @@ Tres capas separadas, que en este repositorio están en [`active/`](../active/):
 
 | Capa | Qué debe hacer |
 |---|---|
-| Física (`space.physics`) | Ecuaciones del problema, Jacobiano exacto y comprobación de 2T y L². |
-| Matemática y algorítmica (`numerical.engine`) | Esquemas temporales de paso simple y adaptativo (Euler, Crank-Nicolson, RK4), estimación del error por extrapolación de Richardson y regiones de estabilidad \|R(z)\| ≤ 1. |
-| Visualización (`gui.reactive`) | Cuadro de mando interactivo con varios paneles (p. ej. `matplotlib.widgets`). |
+| Física (`space_physics`) | Ecuaciones del problema, Jacobiano exacto y comprobación de 2T y L². |
+| Matemática y algorítmica (`numerical_engine`) | Esquemas temporales de paso simple y adaptativo (Euler, Crank-Nicolson, RK4), estimación del error por extrapolación de Richardson y regiones de estabilidad \|R(z)\| ≤ 1. |
+| Visualización (`gui_reactive`) | Cuadro de mando interactivo con varios paneles (p. ej. `matplotlib.widgets`). |
 
 La interfaz debe permitir, en tiempo real:
 
