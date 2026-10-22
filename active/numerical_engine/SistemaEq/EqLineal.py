@@ -1,42 +1,50 @@
-from numpy import array, zeros, max, dot 
+from numpy import array, zeros, max, dot
 
-def  Gauss(A, b):
-  N = len(b);  x = zeros(N) 
-# forward elimination
-  for k, _ in enumerate(A): 
-    pivoting_row_swapping(A, b, k, N)
-# elimination for all rows below pivot
-    for i in range(k+1, N):  
-      c = A[i, k] / A[k, k]  
-      A[i, k:N] = A[i, k:N] - c * A[k, k:N] 
-      b[i] = b[i] - c * b[k] 
-# back substitution
-    for i in range(N-1, -1, -1):
-      x[i] = (b[i] - dot(A[i, i:N], x[i:N]))/ A[i, i]
-    return x 
+def Gauss(A, b):
+    nv = len(b)
+    U = zeros(nv)
 
-def pivoting_row_swapping(A, b, k, N): 
-  s = zeros(N);
-# s[i] largest element of row i
-  for i in range(k, N):
-    s[i] = max(abs(A[i, k:N])) 
-      
-# find row with largest pivoting element
-    pivot = abs(A[k, k] / s[k])
-    l = k
-    for j in range(k, N): 
-      if abs(A[j, k] / s[j]) > pivot: 
-        pivot = abs(A[j, k] / s[j])
-        l = j
+    # Convertir en ceros los elementos por debajo de la diagonal
+    for k, _ in enumerate(A):
+        intercambiar_filas(A, b, k, nv)
 
-# Check singular matrix
-    if pivot == 0.0: print("The matrix is singular"); exit()
-       
-# pivoting if needed
-    if l != k: 
-      A[[k, l] , k:N] = A[[l, k], k:N]  
-      (b[k], b[l]) = (b[l], b[k])
+        # Restar un multiplo de la fila k a las filas inferiores
+        for i in range(k+1, nv):
+            factor = A[i, k] / A[k, k]
+            A[i, k:nv] = A[i, k:nv] - factor * A[k, k:nv]
+            b[i] = b[i] - factor * b[k]
+
+        # Calcular las incognitas desde la ultima fila hacia arriba
+        for i in range(nv-1, -1, -1):
+            U[i] = (b[i] - dot(A[i, i:nv], U[i:nv])) / A[i, i]
+
+        return U
+
+def intercambiar_filas(A, b, k, nv):
+    maximos = zeros(nv)
+
+    # Mayor valor absoluto de la parte restante de cada fila
+    for i in range(k, nv):
+        maximos[i] = max(abs(A[i, k:nv]))
+
+        # Comparar el valor de la columna k con el maximo de su fila
+        mayor = abs(A[k, k] / maximos[k])
+        fila = k
+        for j in range(k, nv):
+            if abs(A[j, k] / maximos[j]) > mayor:
+                mayor = abs(A[j, k] / maximos[j])
+                fila = j
+
+        # Comprobar si se puede continuar resolviendo el sistema
+        if mayor == 0.0:
+            print("La matriz no permite obtener una solucion unica")
+            exit()
+
+        # Colocar la fila elegida en la posicion k
+        if fila != k:
+            A[[k, fila], k:nv] = A[[fila, k], k:nv]
+            (b[k], b[fila]) = (b[fila], b[k])
 
 if __name__ == "__main__":
-  import doctest
-  doctest.testmod(verbose = True)
+    import doctest
+    doctest.testmod(verbose=True)

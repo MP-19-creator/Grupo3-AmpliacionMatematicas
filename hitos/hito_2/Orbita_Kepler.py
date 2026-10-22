@@ -1,12 +1,11 @@
 from active.numerical_engine.temporal_schemes import Euler, RK4, Crank_Nicolson, Euler_implicit
 from active.space_physics.kepler import Kepler
-from active.numerical_engine.Cauchy_Problem import Cauchy_problem
+from active.numerical_engine.Cauchy_Problem import Cauchy_problem, partition
 import matplotlib.pyplot as plt
 from numpy import array, cos, sin, pi  
-from numpy import linspace
 
 def PruebaCauchy(tf, N, U0): 
-   t = linspace(0, tf, N)
+   t = partition(0, tf, N)
    schemes = [Euler, RK4, Crank_Nicolson, Euler_implicit]
 
    for method in schemes:

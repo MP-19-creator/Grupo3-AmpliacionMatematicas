@@ -1,4 +1,8 @@
-from numpy import zeros
+from numpy import array, zeros
+
+def partition(a, b, N):
+    """Devuelve N+1 puntos equiespaciados entre a y b, con N segmentos."""
+    return array([a + i*(b-a)/N for i in range(0, N+1)])
 
 def Cauchy_problem(F, t, U0, method):
     n = len(t) - 1

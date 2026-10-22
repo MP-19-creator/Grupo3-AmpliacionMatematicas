@@ -1,34 +1,40 @@
 from numpy import array, zeros
-from numpy.linalg import norm  
-from active.numerical_engine.SistemaEq.EqLineal import Gauss 
+from numpy.linalg import norm
+from active.numerical_engine.SistemaEq.EqLineal import Gauss
 
-def Newton(F, x0):  
-  iteration = 0; itmax = 1000
-  x = x0; Dx = x0  
-  print("x0 =", x0)
- 
-  while  norm(Dx) > 1e-8 and iteration <= itmax : 
-    iteration = iteration + 1 
-    J = Jacobian(F, x0) 
-    b = -F(x0)
-    Dx = Gauss(J, b) 
-    x[:] = x[:] + Dx
-    print("x =", x, "iteration =", iteration, "Newton norm(Dx) = ", norm(Dx)) 
-  return x 
+def Newton(F, U0):
+    i = 0
+    n = 1000
+    U = U0
+    cambio = U0
+    print("U0 =", U0)
 
-def Jacobian(F, x):  
-  Dx = 1e-3     
-  Dxi = zeros(len(x))
-  J = zeros((len(x), len(x)))
-  for i, _ in enumerate(x):
-    Dxi[:] = 0
-    Dxi[i] = Dx
-    J[:,i] = (F(x + Dxi) - F(x - Dxi))/(2*Dx)  
-  return J    
+    while norm(cambio) > 1e-8 and i <= n:
+        i = i + 1
+        J = Jacobian(F, U0)
+        b = -F(U0)
+        cambio = Gauss(J, b)
+        U[:] = U[:] + cambio
+        print("U =", U, "i =", i, "norma del cambio =", norm(cambio))
 
-# def f(x): 
-#   # return array( [ x**2 - 1 ] ) 
-#   return x**2 - 1
+    return U
 
-# x0 = array( [ 0.1 ])
-# print(" solution =", Newton(f, x0 ) )
+def Jacobian(F, U):
+    dt = 1e-3
+    nv = len(U)
+    cambio = zeros(nv)
+    J = zeros((nv, nv))
+
+    for i, _ in enumerate(U):
+        cambio[:] = 0
+        cambio[i] = dt
+        J[:, i] = (F(U + cambio) - F(U - cambio)) / (2*dt)
+
+    return J
+
+# def f(U):
+#     # return array([U**2 - 1])
+#     return U**2 - 1
+
+# U0 = array([0.1])
+# print("solution =", Newton(f, U0))
