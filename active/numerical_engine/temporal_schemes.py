@@ -1,4 +1,6 @@
 from active.numerical_engine.NewtonRaphson import Newton
+from active.numerical_engine.Cauchy_Problem import Cauchy_problem
+from numpy import concatenate
 
 # Euler explicit
 def Euler(U, dt, t, F): 
@@ -25,13 +27,12 @@ def Crank_Nicolson(U, dt, t, F):
     A = U + dt/2 * F(U, t)
     return Newton(G, U)
 
-# Leap-Frog
-def Leap_Frog(V, dt, t, F):  # V = (Uⁿ, Uⁿ⁻¹), longitud 2N
-    N = len(V) // 2
-    Un, Unm1 = V[:N], V[N:]
-    return concatenate((Unm1 + 2*dt*F(Un, t), Un))  # (Uⁿ⁺¹, Uⁿ)
+# # Leap-Frog
+# def Leap_Frog(V, dt, t, F):  # V = (Uⁿ, Uⁿ⁻¹), longitud 2N
+#     N = len(V) // 2
+#     Un, Unm1 = V[:N], V[N:]
+#     return concatenate((Unm1 + 2*dt*F(Un, t), Un))  # (Uⁿ⁺¹, Uⁿ)
 
-# arranque: el primer paso se da con Euler para tener U¹
-U1 = U0 + dt*F(U0, t[0])
-V  = Cauchy_problem(F, t[1:], concatenate((U1, U0)), Leap_Frog)
-U  = V[:, :N]     
+# U1 = U0 + dt*F(U0, t[0])
+# V  = Cauchy_problem(F, t[1:], concatenate((U1, U0)), Leap_Frog)
+# U  = V[:, :N]     
