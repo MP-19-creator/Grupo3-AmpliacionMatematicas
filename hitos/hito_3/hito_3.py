@@ -1,10 +1,9 @@
-from active.numerical_engine.Cauchy_Problem import partition, error_richardson, orden_convergencia
-from active.numerical_engine.temporal_schemes import Euler, Euler_implicit, Crank_Nicolson, RK4
+from active.numerical_engine.Errores_Convergencia import partition, error_richardson, orden_convergencia
+from active.numerical_engine.Temporal_Schemes import Euler, Euler_implicit, Crank_Nicolson, RK4
 from active.space_physics.oscilador import oscilador
 from numpy import array, zeros, pi, log10, polyfit
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
-
 
 def PruebaError(tf, N, U0, F):
     t = partition(0, tf, N)
@@ -27,7 +26,6 @@ def PruebaError(tf, N, U0, F):
     plt.legend()
     plt.grid(True, alpha=0.2)
     plt.show()
-
 
 def PruebaConvergencia(tf, N, U0, F, refinamientos=10, inicio=4, fin=8):
     t = partition(0, tf, N)
@@ -55,7 +53,6 @@ def PruebaConvergencia(tf, N, U0, F, refinamientos=10, inicio=4, fin=8):
         plt.grid(True, alpha=0.2)
     plt.tight_layout()
     plt.show()
-
 
 if __name__ == '__main__':
     PruebaError(tf=2*pi, N=200, U0=array([1., 0.]), F=oscilador)

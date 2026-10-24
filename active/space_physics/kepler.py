@@ -9,9 +9,4 @@ def Kepler(U, t):
 
     r = (x**2 + y**2)**1.5
 
-    return array([
-        vx,
-        vy,
-        -x/r,
-        -y/r
-    ])
+    return array([vx, vy, -x/r, -y/r])

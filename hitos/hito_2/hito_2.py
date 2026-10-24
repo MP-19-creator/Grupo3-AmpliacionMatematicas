@@ -1,6 +1,7 @@
-from active.numerical_engine.temporal_schemes import Euler, RK4, Crank_Nicolson, Euler_implicit
+from active.numerical_engine.Temporal_Schemes import Euler, RK4, Crank_Nicolson, Euler_implicit
 from active.space_physics.kepler import Kepler
-from active.numerical_engine.Cauchy_Problem import Cauchy_problem, partition
+from active.numerical_engine.Cauchy_Problem import Cauchy_problem
+from active.numerical_engine.Errores_Convergencia import partition
 import matplotlib.pyplot as plt
 from numpy import array, cos, sin, pi  
 

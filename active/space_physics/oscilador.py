@@ -1,4 +1,6 @@
 from numpy import array
 
 def oscilador(U, t):
-    return array([U[1], -U[0]])
+    x = U[0]
+    vx = U[1]
+    return array([vx, -x])
