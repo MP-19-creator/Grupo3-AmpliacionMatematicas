@@ -17,8 +17,7 @@ def Euler(U, dt, t, F):
 #  Euler implicit
 def Euler_implicit(U, dt, t, F):
     def G(X):
-        return X - A
-    A = U + dt * F(U, t + dt)
+        return X - U - dt * F(X, t + dt)
     return Newton(G, U)
 
 # Runge-Kutta 4th order
@@ -44,22 +43,6 @@ def Crank_Nicolson(U, dt, t, F):
         return X - A - dt/2 * (F(X, t + dt))
     A = U + dt/2 * F(U, t)
     return Newton(G, U)
-
-# --------- CONVERGENCIA ---------
-def richardson_error(coarse_solution, fine_solution, order):
-    """Estima el error mediante soluciones con pasos relacionados.
-
-    TODO: documentar la razón entre pasos y alinear las mallas temporales.
-    """
-    raise NotImplementedError
-
-
-def convergence_order(step_sizes, errors):
-    """Estima el orden observado a partir de varios pasos y errores.
-
-    TODO: ajustar la pendiente en escala logarítmica.
-    """
-    raise NotImplementedError
 
 # --------- ESTABILIDAD ---------
 def stability_function(method, z):

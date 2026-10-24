@@ -14,11 +14,11 @@ def Gauss(A, b):
             A[i, k:nv] = A[i, k:nv] - factor * A[k, k:nv]
             b[i] = b[i] - factor * b[k]
 
-        # Calcular las incognitas desde la ultima fila hacia arriba
-        for i in range(nv-1, -1, -1):
-            U[i] = (b[i] - dot(A[i, i:nv], U[i:nv])) / A[i, i]
+    # Calcular las incognitas cuando la matriz ya es triangular
+    for i in range(nv-1, -1, -1):
+        U[i] = (b[i] - dot(A[i, i:nv], U[i:nv])) / A[i, i]
 
-        return U
+    return U
 
 def intercambiar_filas(A, b, k, nv):
     maximos = zeros(nv)
@@ -27,23 +27,23 @@ def intercambiar_filas(A, b, k, nv):
     for i in range(k, nv):
         maximos[i] = max(abs(A[i, k:nv]))
 
-        # Comparar el valor de la columna k con el maximo de su fila
-        mayor = abs(A[k, k] / maximos[k])
-        fila = k
-        for j in range(k, nv):
-            if abs(A[j, k] / maximos[j]) > mayor:
-                mayor = abs(A[j, k] / maximos[j])
-                fila = j
+    # Comparar cuando ya se han calculado todos los maximos
+    mayor = abs(A[k, k] / maximos[k])
+    fila = k
+    for j in range(k, nv):
+        if abs(A[j, k] / maximos[j]) > mayor:
+            mayor = abs(A[j, k] / maximos[j])
+            fila = j
 
-        # Comprobar si se puede continuar resolviendo el sistema
-        if mayor == 0.0:
-            print("La matriz no permite obtener una solucion unica")
-            exit()
+    # Comprobar si se puede continuar resolviendo el sistema
+    if mayor == 0.0:
+        print("La matriz no permite obtener una solucion unica")
+        exit()
 
-        # Colocar la fila elegida en la posicion k
-        if fila != k:
-            A[[k, fila], k:nv] = A[[fila, k], k:nv]
-            (b[k], b[fila]) = (b[fila], b[k])
+    # Colocar la fila elegida en la posicion k
+    if fila != k:
+        A[[k, fila], k:nv] = A[[fila, k], k:nv]
+        (b[k], b[fila]) = (b[fila], b[k])
 
 if __name__ == "__main__":
     import doctest

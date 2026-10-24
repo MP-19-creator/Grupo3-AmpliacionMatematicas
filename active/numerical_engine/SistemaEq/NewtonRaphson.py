@@ -5,17 +5,19 @@ from active.numerical_engine.SistemaEq.EqLineal import Gauss
 def Newton(F, U0):
     i = 0
     n = 1000
-    U = U0
-    cambio = U0
-    print("U0 =", U0)
+    # Trabajar con una copia decimal sin modificar el estado inicial
+    U = array(U0, dtype=float)
 
-    while norm(cambio) > 1e-8 and i <= n:
+    # Iterar mientras U no satisfaga el sistema F(U) = 0
+    while norm(F(U)) > 1e-10 and i < n:
         i = i + 1
-        J = Jacobian(F, U0)
-        b = -F(U0)
+        J = Jacobian(F, U)
+        b = -F(U)
         cambio = Gauss(J, b)
         U[:] = U[:] + cambio
-        print("U =", U, "i =", i, "norma del cambio =", norm(cambio))
+
+    if not norm(F(U)) <= 1e-10:
+        raise RuntimeError("Newton no ha encontrado una solucion con la tolerancia indicada")
 
     return U
 
