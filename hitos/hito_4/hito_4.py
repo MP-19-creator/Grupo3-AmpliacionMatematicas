@@ -29,4 +29,3 @@ for method in schemes:
         plt.colorbar(label="|R(z)|")
         plt.grid(True, alpha=0.2)
         plt.show()
-

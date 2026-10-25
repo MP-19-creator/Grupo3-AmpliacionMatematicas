@@ -1,6 +1,5 @@
 from active.numerical_engine.NewtonRaphson import Newton
-from active.numerical_engine.Cauchy_Problem import Cauchy_problem
-from numpy import concatenate
+from numpy import array_equal, isclose
 
 # Euler explicit
 def Euler(U, dt, t, F): 
@@ -27,12 +26,29 @@ def Crank_Nicolson(U, dt, t, F):
     A = U + dt/2 * F(U, t)
     return Newton(G, U)
 
-# # Leap-Frog
-# def Leap_Frog(V, dt, t, F):  # V = (Uⁿ, Uⁿ⁻¹), longitud 2N
-#     N = len(V) // 2
-#     Un, Unm1 = V[:N], V[N:]
-#     return concatenate((Unm1 + 2*dt*F(Un, t), Un))  # (Uⁿ⁺¹, Uⁿ)
+# Leap-Frog
+_leap_frog_state = None
 
-# U1 = U0 + dt*F(U0, t[0])
-# V  = Cauchy_problem(F, t[1:], concatenate((U1, U0)), Leap_Frog)
-# U  = V[:, :N]     
+def Leap_Frog(U, dt, t, F):
+    global _leap_frog_state
+
+    state = _leap_frog_state
+    if (
+        state is not None
+        and state["function"] is F
+        and isclose(state["next_time"], t)
+        and isclose(state["dt"], dt)
+        and array_equal(state["current"], U)
+    ):        
+        result = state["previous"] + 2 * dt * F(U, t)
+    else:
+        result = U + dt * F(U, t)
+
+    _leap_frog_state = {
+        "function": F,
+        "next_time": t + dt,
+        "dt": dt,
+        "previous": U.copy(),
+        "current": result.copy(),
+    }
+    return result
