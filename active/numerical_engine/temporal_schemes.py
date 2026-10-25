@@ -28,27 +28,13 @@ def Crank_Nicolson(U, dt, t, F):
 
 # Leap-Frog
 _leap_frog_state = None
-
 def Leap_Frog(U, dt, t, F):
     global _leap_frog_state
 
-    state = _leap_frog_state
-    if (
-        state is not None
-        and state["function"] is F
-        and isclose(state["next_time"], t)
-        and isclose(state["dt"], dt)
-        and array_equal(state["current"], U)
-    ):        
-        result = state["previous"] + 2 * dt * F(U, t)
-    else:
+    if _leap_frog_state is None:
         result = U + dt * F(U, t)
+    else:
+        result = _leap_frog_state + 2 * dt * F(U, t)
 
-    _leap_frog_state = {
-        "function": F,
-        "next_time": t + dt,
-        "dt": dt,
-        "previous": U.copy(),
-        "current": result.copy(),
-    }
+    _leap_frog_state = U.copy()
     return result
