@@ -51,7 +51,7 @@ def Quaternion_product(p, q):
 def Attitude_equations(U, t, I):
     """ dw/dt = Euler equations,  dq/dt = 1/2 q (x) (0, w)   (q: body -> inertial) """
     w = U[0:3]; q = U[3:7]
-    return concatenate( ( PEI1(w, t, I), 0.5 * Quaternion_product(q, (0., *w)) ) )
+    return concatenate( ( PEI1(I, w, t), 0.5 * Quaternion_product(q, (0., *w)) ) )
 
 
 def Attitude_jacobian(U, t, I):
@@ -59,7 +59,7 @@ def Attitude_jacobian(U, t, I):
     w1, w2, w3 = U[0:3]
     q0, q1, q2, q3 = U[3:7]
     J = zeros((7, 7))
-    J[0:3, 0:3] = euler_jacobian(U, t, I)
+    J[0:3, 0:3] = euler_jacobian(I, U, t)
     J[3:7, 0:3] = 0.5 * array( [ [-q1, -q2, -q3],
                                  [ q0, -q3,  q2],
                                  [ q3,  q0, -q1],
@@ -90,8 +90,8 @@ def Rigid_body_problem(I, attitude=True):
         def F(U, t): return Attitude_equations(U, t, I)
         F.jacobian = lambda U, t: Attitude_jacobian(U, t, I)
     else:
-        def F(U, t): return PEI1(U, t, I)
-        F.jacobian = lambda U, t: euler_jacobian(U, t, I)
+        def F(U, t): return PEI1(I, U, t)
+        F.jacobian = lambda U, t: euler_jacobian(I, U, t)
     return F
 
 
@@ -118,7 +118,7 @@ def Ellipsoid(semiaxes, n=30):
     u = partition(0, 2*pi, n); v = partition(0, pi, n//2)
     return ( semiaxes[0]*outer(cos(u), sin(v)),
              semiaxes[1]*outer(sin(u), sin(v)),
-             semiaxes[2]*outer(ones(n), cos(v)) )
+             semiaxes[2]*outer(ones(n+1), cos(v)) )
 
 
 def Energy_ellipsoid(I, T2, n=30):

@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
-from numpy import linspace, meshgrid
+from numpy import meshgrid
+from active.numerical_engine.Errores_Convergencia import partition
 from active.numerical_engine.Estabilidad import stability_function
 
 schemes = ["Euler", "Inverse_Euler", "Leap_Frog", "Crank_Nicolson", "RK4"]
 for method in schemes:
-    X, Y = meshgrid(linspace(-5, 3.5, 400), linspace(-3.5, 3.5, 400))
+    X, Y = meshgrid(partition(-5, 3.5, 400), partition(-3.5, 3.5, 400))
     # Revisable pero no sé cómo dibujarlo si no
     if method == "Leap_Frog":
         plt.plot([-6, 4], [0,0], 'k--', linewidth=0.5)
