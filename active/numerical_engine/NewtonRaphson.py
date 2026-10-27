@@ -1,6 +1,9 @@
 from numpy import array, zeros, max, dot
 from numpy.linalg import norm
 
+class Newton_failed(ArithmeticError):
+    """ Newton no converge o el sistema lineal es singular """
+
 def Newton(F, U0):
     i = 0
     n = 1000

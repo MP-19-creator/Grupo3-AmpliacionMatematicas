@@ -1,5 +1,15 @@
+"""
+Capa FISICA del solido rigido libre (PEI 1).  Solo define el problema: no integra ni dibuja.
+
+Estado:  U = (w1, w2, w3)                        dinamica (ecuaciones de Euler, ec. 2)
+         U = (w1, w2, w3, q0, q1, q2, q3)        dinamica + actitud con cuaternion q (cuerpo -> inercial)
+Convenio: I = (I1, I2, I3) con 0 < I1 < I2 < I3 (minimo, intermedio, maximo).
+
+Esta capa NO importa nada de numerical_engine ni de gui_reactive (desacoplo estricto): solo numpy.
+"""
 from numpy import array, cos, pi, sign, sin, sqrt, zeros
 from numpy import concatenate, outer, ones
+from numpy.linalg import eigvals
 from active.numerical_engine.Errores_Convergencia import partition
 
 # Campo de Euler F(ω, t) = [(I2−I3)/I1·ω2·ω3, (I3−I1)/I2·ω3·ω1, (I1−I2)/I3·ω1·ω2]
@@ -37,7 +47,17 @@ def Angular_momentum_L2(U, I):
     w1 = U[..., 0]; w2 = U[..., 1]; w3 = U[..., 2]
     return I1**2 * w1**2 + I2**2 * w2**2 + I3**2 * w3**2
 
-# ---------- INVARIANTES ---------
+#------------------------------------------------------------ 
+
+def Energy_Casimir(U, I, axis):
+    """
+    V = L^2 - I_axis 2T = sum_j I_j (I_j - I_axis) w_j^2   (se conserva: combinacion de las dos integrales)
+      axis = 0 (I1):  V >= 0, definida positiva en (w2, w3)  -> funcion de Lyapunov -> ESTABLE
+      axis = 2 (I3):  V <= 0, definida negativa en (w1, w2)  -> -V es de Lyapunov  -> ESTABLE
+      axis = 1 (I2):  signo indefinido (silla); V = 0 son los dos planos de la separatriz
+    """
+    return Angular_momentum_L2(U, I) - I[axis] * Kinetic_energy_2T(U, I)
+
 def Quaternion_product(p, q):
 
     p0, p1, p2, p3 = p
@@ -112,6 +132,16 @@ def Linear_eigenvalues(I, axis, Omega):
     lam = sqrt(complex(lambda2))
     return array([lam, -lam])
 
+def Jacobian_eigenvalues(I, U):
+    """ Autovalores de J(w) en un estado cualquiera (no solo en los equilibrios): la linealizacion 'congelada'
+        que dice como crecen o giran, en ese instante, las perturbaciones y los errores numericos """
+    return eigvals(euler_jacobian(I, U, 0.))
+
+
+def Kinematic_eigenvalues(U):
+    """ Autovalores del bloque dq/dt = 1/2 Omega(w) q:  +-i|w|/2 (dobles).  Puramente imaginarios: |q| = cte """
+    s = 0.5 * sqrt(U[0]**2 + U[1]**2 + U[2]**2)
+    return array([1j*s, -1j*s])
 
 # ------------------------------------------------------------ Poinsot geometry
 def Ellipsoid(semiaxes, n=30):

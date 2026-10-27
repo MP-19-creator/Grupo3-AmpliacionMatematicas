@@ -60,3 +60,59 @@ def orden_convergencia(F, t, U0, method, refinamientos=10, inicio=4, fin=8):
     # Aplicar Richardson una vez medido el orden
     errores = errores / (1 - 1/2**orden_observado)
     return intervalos, errores, orden_observado
+
+# ---------------------------------------------------------------------------------------------
+# Estudio de convergencia para la GUI (cualquier problema, en particular el solido rigido)
+# ---------------------------------------------------------------------------------------------
+def curva_convergencia(F, tf, U0, method, N0=40, niveles=8, t0=0.):
+    """
+    Richardson sin solucion exacta.  Para N_k = N0 2^k (k = 0..niveles-1):
+        D_k = |U_{N_k}(tf) - U_{2 N_k}(tf)|          (diferencia entre la malla N y la malla 2N)
+    Si el esquema es de orden q, el error de U_N es E_N ~ C dt^q y  D_k ~ C dt^q (1 - 2^-q),
+    asi que  log D = -q log N + cte  (recta de pendiente -q)  y  E_N ~ D_k / (1 - 2^-q).
+    Cada solucion se reutiliza: la malla 2N del nivel k es la malla N del nivel k+1 (niveles+1 integraciones).
+    Devuelve N (niveles,) y D (niveles,).  Si una integracion falla, D vale nan desde ese nivel.
+    """
+    finales = []
+    for k in range(niveles + 1):
+        N = N0 * 2**k
+        try:
+            finales.append(Cauchy_problem(F, partition(t0, tf, N), U0, method)[-1])
+        except ArithmeticError:
+            finales.append(None)
+    N = array([N0 * 2**k for k in range(niveles)])
+    D = array([norm(finales[k] - finales[k+1]) if finales[k] is not None and finales[k+1] is not None
+               else float("nan") for k in range(niveles)])
+    return N, D
+
+
+def ordenes_locales(D):
+    """ p_k = log2(D_k / D_{k+1}):  al duplicar N el error se divide por 2^p.  Tiende al orden q """
+    return log10(D[:-1] / D[1:]) / log10(2.)
+
+
+def tramo_recto(N, D, suelo=1e-13, tolerancia=0.15):
+    """
+    Elige el tramo ASINTOTICO (recto) de log D frente a log N sin usar el orden teorico:
+      - fuera los puntos no finitos o por debajo del suelo de redondeo (ahi D ya no puede bajar)
+      - candidatos: tramos contiguos de 3 o mas puntos cuyos ordenes locales p_k casi no cambian
+        (max p - min p <= 15 % de la mediana)
+      - se queda con el que llega a las mallas mas finas (es el mas asintotico); si empatan, el mas largo
+    Devuelve (indices, pendiente, ordenada) del ajuste por minimos cuadrados en ese tramo.
+    """
+    validos = [k for k in range(len(D)) if isfinite(D[k]) and D[k] > suelo]
+    mejor = []
+    for a in range(len(validos)):
+        for b in range(a + 2, len(validos)):
+            idx = validos[a:b+1]
+            if idx[-1] - idx[0] != len(idx) - 1:                  # tiene que ser contiguo
+                break
+            p = sorted(ordenes_locales(D[idx]))
+            mediana = p[len(p)//2]
+            if mediana > 0 and p[-1] - p[0] <= tolerancia * mediana:
+                if not mejor or idx[-1] > mejor[-1] or (idx[-1] == mejor[-1] and len(idx) > len(mejor)):
+                    mejor = idx
+    if len(mejor) < 2:                                            # nada recto: los ultimos puntos validos
+        mejor = validos[-3:] if len(validos) >= 2 else list(range(len(D)))
+    pendiente, ordenada = polyfit(log10(N[mejor]), log10(D[mejor]), 1)
+    return array(mejor), pendiente, ordenada
