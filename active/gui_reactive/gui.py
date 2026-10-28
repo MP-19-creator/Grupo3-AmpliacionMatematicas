@@ -2,7 +2,7 @@
 Capa de VISUALIZACION (gui_reactive).  Es la unica capa que conoce a las otras dos:
 toma F de space_physics, la integra con numerical_engine y dibuja.
 
-Cuadro de mando en CUATRO PAGINAS (pestanas arriba, controles comunes abajo):
+Cuaderno ÓRBITA en CUATRO PAGINAS (pestañas arriba, banco de controles lateral):
     1  Attitude & phase space   la caja girando, Poinsot, separatriz, polhoda, w(t)          (enunciado 3.3)
     2  Invariants               deriva de 2T, L^2 y |q| con los tres esquemas y el mismo dt   (enunciado 3.2)
     3  Stability regions        |R(z)| <= 1 con los autovalores z = lambda dt del problema   (enunciado 3)
@@ -323,7 +323,7 @@ def build_gui(animate=True):
          "runs_version": -1, "page": 0, "request": 0, "busy": False, "ready": False,
          "transition": False, "last_frame": None}
 
-    fig = plt.figure(figsize=(18, 10.5))
+    fig = plt.figure(figsize=(19.2, 11.2))
     # Los widgets solicitan un dibujo al construirse. Agruparlos evita decenas
     # de renders completos durante el arranque (solo afecta a esta figura).
     initial_draw_idle = fig.canvas.draw_idle
@@ -336,7 +336,7 @@ def build_gui(animate=True):
     cache = OrderedDict()
     study_cache = OrderedDict()
     try:
-        fig.canvas.manager.set_window_title("Intermediate axis theorem  ·  PEI 1")
+        fig.canvas.manager.set_window_title("ÓRBITA · Cuaderno de dinámica / PEI 1")
     except AttributeError:
         pass
 
@@ -492,8 +492,8 @@ def build_gui(animate=True):
             if j == 3:
                 page.tf_study.set_active(j == i)
                 page.slider_ax.set_visible(j == i)
-            tabs[j].ax.set_facecolor(C["accent"] if j == i else C["line"])
-            tabs[j].color = C["accent"] if j == i else C["line"]
+            tabs[j].ax.set_facecolor(C["accent"] if j == i else C["bg"])
+            tabs[j].color = C["accent"] if j == i else C["bg"]
             tabs[j].label.set_color(C["bg"] if j == i else C["text"])
         page = pages[i]
         placeholder.set_visible(not prepared)
@@ -505,7 +505,7 @@ def build_gui(animate=True):
             if prepared:
                 page.update_frame(S["k"])
                 if i == 2:
-                    page.legend_text.set_position((.355, .816))
+                    page.legend_text.set_position((content_x(.355), .827))
                     page.legend_text.set_fontsize(9)
                     page.legend_text.set_text("Rojo: amplificación extra · Azul: amortiguamiento extra · Puntos: λΔt del estado actual")
                 warning.set_text("Calculando nueva trayectoria…" if S["busy"] else "Listo · arrastra las vistas 3D o pulsa 1–4 para explorar")
@@ -590,7 +590,7 @@ def build_gui(animate=True):
                 a.do_3d_projection()
             fig.draw_artist(a)
 
-    band = Bbox([[0.0, 0.250], [1.0, 0.835]])
+    band = Bbox([[0.25, 0.075], [1.0, 0.855]])
 
     def on_draw(_):
         """ Tras cada redibujado completo: guardar el fondo y pintar encima lo animado """
@@ -690,53 +690,70 @@ def build_gui(animate=True):
             if tp is not None:
                 goto(tp)
 
-    # ------------------------------------------------------------ cabecera y pestanas
-    fig.text(.028, .977, "PEI / 01     LABORATORIO DE DINÁMICA", fontsize=9, color=C["accent"], fontweight="bold")
-    fig.text(.028, .946, "El equilibrio de lo inestable", fontsize=27, fontweight="bold", va="center")
-    fig.text(.029, .916, "Teorema del eje intermedio  /  Un sólido libre, tres ejes y cuatro formas de entenderlo.",
-             fontsize=11, color=C["muted"], va="center")
-    fig.text(.97, .963, "ATTITUDE LAB", fontsize=13, fontweight="bold", color=C["accent"], ha="right")
-    transport = fig.text(.97, .935, "Preparando simulación", fontsize=9, color=C["muted"], ha="right")
-    warning = fig.text(.030, .840, "", fontsize=9.5, color=C["muted"], va="center")
-    perf_text = fig.text(.985, .824, "", fontsize=8, color=C["warn"], ha="right", animated=True)
+    # ------------------------------------------------------------ cuaderno / composición
+    # La retícula transforma únicamente artistas. Los datos y callbacks conservan su contrato.
+    def content_x(x):
+        return .255 + .735*x
+
+    def content_y(y):
+        return .105 + (y-.255)*1.10
+
+    fig.patches.append(FancyBboxPatch((.012, .018), .227, .964,
+        boxstyle="round,pad=0,rounding_size=0.018", transform=fig.transFigure,
+        fc=C["panel"], ec=C["line"], lw=.8, zorder=-3))
+    fig.text(.030, .950, "ÓRBITA", fontsize=29, fontweight="bold", color=C["accent"])
+    fig.text(.031, .924, "C U A D E R N O   D E   D I N Á M I C A", fontsize=7.8, color=C["muted"])
+    fig.text(.031, .888, "PEI 01   /   SÓLIDO LIBRE", fontsize=9, color=C["text"], fontweight="bold")
+    fig.text(.266, .952, "La belleza de un giro imperfecto.", fontsize=27, fontweight="bold", color=C["ink"])
+    fig.text(.267, .920, "EXPERIMENTO 01     /     Teorema del eje intermedio", fontsize=10, color=C["muted"])
+    fig.text(.982, .950, "I₁ < I₂ < I₃", fontsize=17, ha="right", color=C["accent"], family="monospace")
+    transport = fig.text(.982, .920, "Preparando simulación", fontsize=8.5, color=C["muted"], ha="right")
+    warning = fig.text(.267, .032, "", fontsize=9, color=C["muted"], va="center")
+    fig.text(.982, .032, "AMPLIACIÓN DE MATEMÁTICAS / 01", fontsize=8, color=C["accent"], ha="right")
+    perf_text = fig.text(.982, .084, "", fontsize=8, color=C["warn"], ha="right", animated=True)
 
     pages = [_AttitudePage(fig, S), Invariants_page(fig, S), Stability_page(fig, S),
              _StudyPage(fig, S, schemes, lambda: richardson_changed())]
-    # Encajar las paginas existentes bajo la nueva navegacion, sin editar sus archivos.
-    def content_y(y):
-        return .258 + (y-.255) * .86
     for page in pages:
         for ax in page.axes:
             x, y, w, h = ax.get_position().bounds
-            ax.set_position([x, content_y(y), w, h*.86])
+            ax.set_position([content_x(x), content_y(y), w*.735, h*1.10])
+            ax.title.set_fontsize(9)
         for text in page.texts:
             x, y = text.get_position()
-            text.set_position((x, content_y(y)))
+            text.set_position((content_x(x), content_y(y)))
+            text.set_fontsize(min(text.get_fontsize(), 9))
+
     attitude = pages[0]
-    attitude.info_labels.set_fontsize(9)
-    attitude.info.set_fontsize(9)
-    attitude.badge.set_fontsize(11)
-    attitude.flips.set_fontsize(43)
-    attitude.clock.set_fontsize(17)
-    attitude.info_labels.set_x(.737)
-    # Labels cortos para que la columna de valores respire.
+    attitude.texts[0].set_text("ORIENTACIÓN / referencia inercial")
+    attitude.texts[1].set_text("POINSOT / espacio de fases")
+    attitude.texts[2].set_text("TEORÍA Y SIMULACIÓN")
+    attitude.flips_label.set_text("VOLTEOS DEL EJE DE GIRO")
+    attitude.ax_w.set_title("VELOCIDAD ANGULAR / ejes del cuerpo", loc="left", fontsize=9, color=C["muted"])
+    attitude.info_labels.set_fontsize(8)
+    attitude.info.set_fontsize(8)
+    attitude.badge.set_fontsize(10)
+    attitude.flips.set_fontsize(48)
+    attitude.clock.set_fontsize(16)
+    attitude.info_labels.set_x(content_x(.737))
     original_info = attitude.write_info
     def compact_info():
         original_info()
-        attitude.info_labels.set_text("Autovalor λ\nPolhoda\nPeriodo exacto\nPeriodo medido\nDeriva 2T · L²\nDeriva |q|\nMétodo\nPasos · cálculo")
+        attitude.info_labels.set_text("Autovalor λ\nPolhode\nPeriodo exacto\nPeriodo medido\nΔ 2T · L²\nΔ |q|\nMétodo\nPasos · cálculo")
+        attitude.badge.set_text(attitude.badge.get_text().replace("UNSTABLE  ·  saddle", "INESTABLE").replace("STABLE  ·  centre", "ESTABLE"))
     attitude.write_info = compact_info
-    timeline = fig.add_axes([.738, .491, .232, .021])
+    # Micrográfica de transporte: el tiempo se sigue leyendo de la solución real.
+    timeline = fig.add_axes([content_x(.738), content_y(.530), .232*.735, .018])
     timeline.set_facecolor(C["panel"])
-    timeline.set_ylim(-1, 1)
-    timeline.set_yticks([])
+    timeline.set_ylim(-1, 1); timeline.set_yticks([])
     timeline.tick_params(axis="x", colors=C["muted"], labelsize=8, length=0, pad=6)
     for spine in timeline.spines.values():
         spine.set_visible(False)
-    timeline.axhline(0, color=C["line"], lw=5, solid_capstyle="round")
-    progress, = timeline.plot([], [], color=C["accent"], lw=5, solid_capstyle="round", animated=True)
-    playhead, = timeline.plot([], [], "o", color=C["text"], ms=7, animated=True)
-    timeline_title = fig.text(.737, .538, "RECORRER LA SIMULACIÓN", fontsize=9, fontweight="bold", color=C["accent"])
-    timeline_hint = fig.text(.737, .443, "Haz clic en la barra para viajar en el tiempo.", fontsize=9, color=C["muted"])
+    timeline.axhline(0, color=C["line"], lw=4, solid_capstyle="round")
+    progress, = timeline.plot([], [], color=C["accent"], lw=4, solid_capstyle="round", animated=True)
+    playhead, = timeline.plot([], [], "o", color=C["accent"], ms=7, mec=C["panel"], animated=True)
+    timeline_title = fig.text(content_x(.737), content_y(.570), "RECORRIDO TEMPORAL", fontsize=8.5, fontweight="bold", color=C["accent"])
+    timeline_hint = fig.text(content_x(.737), content_y(.478), "Pulsa la línea para explorar el tiempo.", fontsize=8, color=C["muted"])
     attitude.axes.append(timeline)
     attitude.texts += [timeline_title, timeline_hint]
     original_refresh, original_frame, original_animated = attitude.refresh, attitude.update_frame, attitude.animated
@@ -753,85 +770,82 @@ def build_gui(animate=True):
     attitude.update_frame = update_attitude
     attitude.animated = lambda: original_animated() + [progress, playhead]
     attitude_cards = []
-    for x, w in ((.014, .692), (.720, .266)):
-        card = FancyBboxPatch((x, .255), w, .557, boxstyle="round,pad=0,rounding_size=0.012",
-                              transform=fig.transFigure, fc=C["panel"], ec=C["line"], lw=.8, zorder=-2)
-        fig.patches.append(card)
-        attitude_cards.append(card)
-    placeholder = fig.text(.5, .55, "Preparando simulación…", ha="center", va="center", fontsize=15,
-                           color=C["muted"], linespacing=2,
-                           bbox=dict(boxstyle="round,pad=2", fc=C["panel"], ec=C["line"]))
+    for x, w in ((.005, .698), (.720, .280)):
+        card = FancyBboxPatch((content_x(x), .099), w*.735, .720,
+            boxstyle="round,pad=0,rounding_size=0.012", transform=fig.transFigure,
+            fc=C["panel"], ec=C["line"], lw=.8, zorder=-2)
+        fig.patches.append(card); attitude_cards.append(card)
+    placeholder = fig.text(.62, .48, "Preparando simulación…", ha="center", va="center", fontsize=13,
+        color=C["muted"], linespacing=2, bbox=dict(boxstyle="round,pad=2", fc=C["panel"], ec=C["line"]))
     tabs = []
-    tab_labels = ("01   Actitud y fases", "02   Invariantes", "03   Estabilidad", "04   Convergencia")
-    for i, page in enumerate(pages):
-        b = Button(fig.add_axes([0.028 + 0.239*i, 0.863, 0.227, 0.039]), tab_labels[i], color=C["line"],
-                   hovercolor="#30456E")
-        b.label.set_fontsize(11); b.label.set_fontweight("bold"); b.label.set_color(C["text"])
+    for i, label in enumerate(("01 / Movimiento", "02 / Conservación", "03 / Estabilidad", "04 / Precisión")):
+        b = Button(fig.add_axes([.266 + .183*i, .861, .174, .037]), label,
+                   color=C["bg"], hovercolor=C["soft"])
+        b.label.set_fontsize(10); b.label.set_fontweight("bold"); b.label.set_color(C["text"])
         for sp in b.ax.spines.values():
             sp.set_visible(False)
         b.on_clicked(lambda _, i=i: show_page(i))
         tabs.append(b)
 
-    # ------------------------------------------------------------ banda de controles (comun a todas las paginas)
-    for x, w in ((.012, .261), (.282, .230), (.521, .137), (.667, .139), (.815, .173)):
-        fig.patches.append(FancyBboxPatch((x, .014), w, .228, boxstyle="round,pad=0,rounding_size=0.009",
-                                          transform=fig.transFigure, fc=C["panel"], ec=C["line"], lw=.8, zorder=-1))
-    for x, title in ((0.028, "01 / SÓLIDO"), (0.300, "02 / PRECISIÓN"), (0.535, "03 / MÉTODO"), (0.680, "04 / GIRO INICIAL"),
-                     (0.830, "EXPLORAR")):
-        fig.text(x, 0.220, title, fontsize=9.5, fontweight="bold", color=C["accent"])
+    # ------------------------------------------------------------ banco lateral
+    def section(y, number, title):
+        fig.text(.031, y, number, fontsize=9, color=C["accent"], fontweight="bold", family="monospace")
+        fig.text(.055, y, title, fontsize=9, color=C["text"], fontweight="bold")
+        fig.add_artist(plt.Line2D([.031, .220], [y-.012, y-.012], transform=fig.transFigure, color=C["line"], lw=.8))
+    section(.846, "01", "PROPIEDADES DEL SÓLIDO")
+    section(.625, "02", "RESOLUCIÓN TEMPORAL")
+    section(.467, "03", "INTEGRACIÓN")
+    section(.285, "04", "EJE DE GIRO INICIAL")
 
     def slider(x, y, w, label, a, b, v, fmt="%.2f"):
-        s = Slider(fig.add_axes([x, y, w, 0.018]), label, a, b, valinit=v, valfmt=fmt, color=C["accent"],
-                   track_color=C["line"], initcolor="none",
-                   handle_style={"facecolor": C["text"], "edgecolor": C["accent"], "size": 11})
+        s = Slider(fig.add_axes([x, y, w, .016]), label, a, b, valinit=v, valfmt=fmt,
+            color=C["accent"], track_color=C["line"], initcolor="none",
+            handle_style={"facecolor": C["panel"], "edgecolor": C["accent"], "size": 9})
         s.ax.set_facecolor(C["panel"])
-        s.label.set_color(C["text"]); s.label.set_fontsize(11)
-        s.valtext.set_color(C["muted"]); s.valtext.set_fontsize(10)
+        s.label.set_color(C["text"]); s.label.set_fontsize(10)
+        s.valtext.set_color(C["accent"]); s.valtext.set_fontsize(9)
         s.on_changed(schedule)
         return s
 
-    S_I1  = slider(0.075, 0.183, 0.165, r"$I_1$", 0.2, 5., 1.)
-    S_I2  = slider(0.075, 0.148, 0.165, r"$I_2$", 0.2, 5., 2.)
-    S_I3  = slider(0.075, 0.113, 0.165, r"$I_3$", 0.2, 5., 3.)
-    S_W   = slider(0.075, 0.078, 0.165, r"$\Omega$", 0.1, 3., 1.)
-    S_eps = slider(0.075, 0.043, 0.165, r"$\log_{10}\varepsilon$", -8., -1., -3.)
-    S_dt  = slider(0.355, 0.183, 0.120, r"$\log_{10}\Delta t$", -3., -0.3, -1.7)
-    S_tf  = slider(0.355, 0.148, 0.120, r"$t_f$", 10., 150., 80., "%.0f")
-    S_tol = slider(0.355, 0.113, 0.120, r"$\log_{10}$tol", -11., -3., -6.)
+    S_I1  = slider(.080, .803, .122, r"$I_1$", .2, 5., 1.)
+    S_I2  = slider(.080, .767, .122, r"$I_2$", .2, 5., 2.)
+    S_I3  = slider(.080, .731, .122, r"$I_3$", .2, 5., 3.)
+    S_W   = slider(.080, .695, .122, r"$\Omega$", .1, 3., 1.)
+    S_eps = slider(.080, .659, .122, r"$\log_{10}\varepsilon$", -8., -1., -3.)
+    S_dt  = slider(.080, .582, .122, r"$\log_{10}\Delta t$", -3., -.3, -1.7)
+    S_tf  = slider(.080, .545, .122, r"$t_f$", 10., 150., 80., "%.0f")
+    S_tol = slider(.080, .508, .122, r"$\log_{10}$tol", -11., -3., -6.)
 
-    def button(x, y, label, callback):
-        b = Button(fig.add_axes([x, y, 0.075, 0.040]), label, color=C["line"], hovercolor="#30456E")
-        b.label.set_color(C["text"]); b.label.set_fontsize(10)
+    def button(x, y, label, callback, width=.089, primary=False):
+        b = Button(fig.add_axes([x, y, width, .035]), label,
+                   color=C["accent"] if primary else C["soft"], hovercolor=C["muted"] if primary else C["line"])
+        b.label.set_color(C["panel"] if primary else C["accent"]); b.label.set_fontsize(9)
+        b.label.set_fontweight("bold")
         for sp in b.ax.spines.values():
             sp.set_visible(False)
         b.on_clicked(callback)
         return b
 
-    B_play  = button(0.300, 0.030, "Pausar", play_pause)
-    B_reset = button(0.395, 0.030, "Restablecer", reset)
+    B_play = button(.031, .111, "Pausar", play_pause, primary=True)
+    B_reset = button(.131, .111, "Restablecer", reset)
 
     def radio(rect, labels, active):
         ax = fig.add_axes(rect); ax.set_facecolor(C["panel"])
         for sp in ax.spines.values():
             sp.set_visible(False)
         r = RadioButtons(ax, labels, active=active, activecolor=C["accent"],
-                         radio_props={"edgecolor": C["muted"], "s": 70})
+                         radio_props={"edgecolor": C["muted"], "s": 48})
         for txt in r.labels:
-            txt.set_color(C["text"]); txt.set_fontsize(10.5)
+            txt.set_color(C["text"]); txt.set_fontsize(9.5)
         r.on_clicked(schedule)
         return r
 
-    R_scheme = radio([0.527, 0.105, 0.125, 0.105], list(schemes), 2)
-    R_mode   = radio([0.527, 0.020, 0.125, 0.075], list(modes), 0)
-    R_axis   = radio([0.669, 0.105, 0.132, 0.105], list(axes_names), 1)
-    for r in (R_scheme, R_mode, R_axis):
-        for label in r.labels:
-            label.set_fontsize(9)
-    notes_text = fig.text(0.680, 0.085, "", fontsize=8, color=C["warn"], va="top", linespacing=1.5,
-                          wrap=True)
-    fig.text(0.830, 0.197, "1–4      Cambiar de vista\nEspacio  Reproducir / pausar\n← →      Recorrer el tiempo\n"
-             "+ / −     Ajustar velocidad\nV          Restaurar cámaras\nF          Pantalla completa\n\nArrastra las vistas 3D.\nPulsa una curva para saltar.",
-             fontsize=9, color=C["muted"], va="top", linespacing=1.5)
+    R_scheme = radio([.030, .365, .192, .090], list(schemes), 2)
+    R_mode = radio([.030, .300, .192, .060], list(modes), 0)
+    R_axis = radio([.030, .181, .192, .090], list(axes_names), 1)
+    notes_text = fig.text(.031, .169, "", fontsize=7.5, color=C["warn"], va="top", linespacing=1.3)
+    fig.text(.031, .087, "Espacio / pausa    ·    1–4 / vistas\n← → tiempo    ·    + − velocidad\nArrastra el 3D    ·    V / cámara    ·    F / ampliar",
+             fontsize=7.5, color=C["muted"], va="top", linespacing=1.7)
 
     timer = fig.canvas.new_timer(interval=350)
     timer.single_shot = True

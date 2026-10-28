@@ -1,18 +1,20 @@
 """
-Estilo de presentacion comun a todas las paginas de la GUI: tema oscuro, paleta y pequenas ayudas de dibujo.
-Los colores de los ejes del cuerpo (e1 rojo, e2 verde, e3 azul) y de los esquemas son los mismos en todas las paginas.
+Estilo de presentacion comun a todas las paginas de la GUI: tema claro, paleta y pequenas ayudas de dibujo.
+Los colores de los ejes del cuerpo (e1 cobre, e2 verde petróleo, e3 violeta) y de los esquemas son los mismos en todas las paginas.
 """
 import sys
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
-C = dict(bg="#0B1220", panel="#121B2E", line="#24324D", text="#E8EEF7", muted="#8B9BB8",
-         accent="#5AA9FF", gold="#D4A246", e=("#FF6B5A", "#3DDC84", "#5AA9FF"),
-         energy="#5AA9FF", momentum="#FFB347", polhode="#F4F7FB", separatrix="#FF4D6D", point="#FF4FD8",
-         ok="#3DDC84", bad="#FF4D6D", warn="#FFC145")
+# ÓRBITA / cuaderno de dinámica: papel cálido, tinta violeta y cobre.
+C = dict(bg="#F4F1E9", panel="#FFFDF7", line="#DCD6CB", text="#292538", muted="#736D7C",
+         accent="#6544BC", gold="#D77C48", e=("#C85B37", "#298579", "#7252BC"),
+         energy="#7252BC", momentum="#C98A30", polhode="#373044", separatrix="#C54F67", point="#16877C",
+         ok="#398575", bad="#BD4F52", warn="#A96120", soft="#EBE4F8", ink="#302744")
 
-# Un color por esquema (el mismo en invariantes, estabilidad y Richardson)
-scheme_colors = { "Euler": "#FF8A5B", "Crank-Nicolson": "#4FD1C5", "RK4": "#F4F7FB" }
+# Colores consistentes y legibles sobre papel en las cuatro vistas.
+scheme_colors = {"Euler": "#C85B37", "Crank-Nicolson": "#218579", "RK4": "#6544BC"}
+
 
 
 def _font(candidates):
@@ -21,7 +23,7 @@ def _font(candidates):
 
 
 def Presentation_style():
-    """ Tema oscuro y teclas libres para los atajos (se quitan los atajos de matplotlib que chocan) """
+    """ Tema claro y teclas libres para los atajos (se quitan los atajos de matplotlib que chocan) """
     plt.rcParams.update({
         "toolbar": "None",
         "font.family": _font(["Segoe UI", "Inter", "Helvetica Neue", "Arial", "DejaVu Sans"]),
@@ -29,7 +31,7 @@ def Presentation_style():
         "figure.facecolor": C["bg"], "axes.facecolor": C["panel"], "savefig.facecolor": C["bg"],
         "axes.edgecolor": C["line"], "axes.labelcolor": C["muted"], "text.color": C["text"],
         "xtick.color": C["muted"], "ytick.color": C["muted"], "axes.titlecolor": C["muted"],
-        "grid.color": C["line"], "grid.alpha": 0.7, "grid.linewidth": 0.6,
+        "grid.color": C["line"], "grid.alpha": 0.55, "grid.linewidth": 0.6, "grid.linestyle": ":",
         "keymap.back": [], "keymap.forward": [], "keymap.home": ["h", "home"], "keymap.pan": [],
         "keymap.zoom": [], "keymap.grid": [], "keymap.grid_minor": [], "keymap.xscale": [],
         "keymap.yscale": [], "keymap.quit": ["ctrl+w", "cmd+w"], "keymap.save": ["ctrl+s"] })
