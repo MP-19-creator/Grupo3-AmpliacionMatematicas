@@ -15,9 +15,18 @@ Los colores de cada integrador y de los tres ejes se conservan entre vistas. La
 retícula de presentación y el área de repintado de la animación están definidos en
 `gui.py`; la paleta compartida está en `style.py`.
 
-El rediseño conserva los módulos de `space_physics` y `numerical_engine`, las
-condiciones iniciales, los rangos de parámetros, los métodos de paso fijo y
-adaptativo y el cálculo cancelable en segundo plano.
+ε y Δt se introducen directamente en campos numéricos: escribe el valor y pulsa
+Intro. Se admite coma decimal y notación científica. ε admite de 0 a 1; Δt,
+de 0,000001 a 2 segundos. El tiempo final puede reducirse hasta 1 segundo.
+La tolerancia aparece al seleccionar el modo adaptativo y también se introduce
+como valor directo.
+
+El paso fijo respeta el Δt solicitado, con un último paso más corto si hace falta
+para alcanzar el tiempo final. Si se alcanza el presupuesto de 100 000 pasos
+(30 000 para Crank–Nicolson), se muestra una trayectoria parcial y un aviso con
+el tiempo alcanzado; reduce el tiempo final para estudiar pasos aún más pequeños.
+La animación utiliza como máximo 4000 muestras, conservando los nodos completos
+para el análisis. Los módulos de `space_physics` y `numerical_engine` se mantienen.
 
 Referencias consultadas para separar controles, movimiento y lectura de resultados:
 

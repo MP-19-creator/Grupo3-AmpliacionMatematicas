@@ -29,13 +29,13 @@ from multiprocessing import get_context
 from types import SimpleNamespace
 from collections import OrderedDict
 from inspect import signature
-from numpy import array, argmin, arange, clip, errstate, interp, linspace, searchsorted, isfinite, eye, maximum, log10
+from numpy import array, argmin, arange, clip, errstate, interp, linspace, searchsorted, isfinite, eye, maximum, log10, ceil
 from numpy.linalg import norm, solve, LinAlgError
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 from matplotlib.transforms import Bbox
-from matplotlib.widgets import Slider, Button, RadioButtons
+from matplotlib.widgets import Slider, Button, RadioButtons, TextBox
 
 from active.numerical_engine.Cauchy_Problem import Cauchy_problem, Cauchy_problem_adaptive, Integration_stopped
 from active.numerical_engine.temporal_schemes import Euler, Crank_Nicolson, RK4
@@ -87,9 +87,9 @@ _compatible_cn.__name__ = "Crank_Nicolson"
 _cn = Crank_Nicolson if len(signature(Newton).parameters) >= 3 else _compatible_cn
 schemes = {"Euler": _GuiScheme(Euler, 1), "Crank-Nicolson": _GuiScheme(_cn, 2), "RK4": _GuiScheme(RK4, 4)}
 slow = (schemes["Crank-Nicolson"],)
-N_max = { "fast": 20000, "slow": 6000 }                   # la GUI no debe congelarse
-axes_names = { "Minor axis  I1": 0, "Intermediate  I2": 1, "Major axis  I3": 2 }
-modes = ("Fixed Δt", "Adaptive (Richardson)")
+N_max = { "fast": 100000, "slow": 30000 }                  # calculo cancelable y memoria acotada
+axes_names = { "Menor  I₁": 0, "Intermedio  I₂": 1, "Mayor  I₃": 2 }
+modes = ("Paso fijo", "Adaptativo")
 N_display = 4000                                          # puntos para animar una solucion adaptativa
 N_draw = 2000                                             # puntos dibujados por curva (se integra con todos)
 play_seconds = 20                                         # segundos reales que dura t in [0, tf] a velocidad x1
@@ -127,7 +127,7 @@ def _run_calculation(kind, snapshot, extra, expected):
 def Integrate(F, tf, U0, scheme, dt, adaptive=False, tol=1e-8):
     """
     Cauchy_problem (o el adaptativo) protegido: si el esquema explota o Newton falla devuelve lo calculado
-    y una nota.  Paso fijo: N = tf/dt limitado por N_max.  Devuelve (t, U, nota).
+    y una nota. Paso fijo: conserva dt y acorta el horizonte si alcanza N_max.
     """
     note = ""
     try:
@@ -136,11 +136,13 @@ def Integrate(F, tf, U0, scheme, dt, adaptive=False, tol=1e-8):
                 t, U = Cauchy_problem_adaptive(F, tf, U0, scheme, tol=tol, dt0=dt,
                                                max_steps=N_max["slow" if scheme in slow else "fast"])
             else:
-                N = max(2, int(round(tf / dt)))
+                N = max(1, int(ceil(tf / dt)))
                 Nm = N_max["slow" if scheme in slow else "fast"]
                 if N > Nm:
-                    N, note = Nm, f"N capped at {Nm}"
-                t = linspace(0, tf, N + 1)
+                    N = Nm
+                    note = f"Límite de {Nm:,} pasos: t = {N*dt:g} s (Δt = {dt:g})"
+                t = arange(N + 1, dtype=float) * dt
+                t[-1] = min(t[-1], tf)
                 U = Cauchy_problem(F, t, U0, scheme)
     except Integration_stopped as e:
         U, t = e.U_partial, e.t_partial
@@ -150,7 +152,7 @@ def Integrate(F, tf, U0, scheme, dt, adaptive=False, tol=1e-8):
     if not bounded.all():
         end = max(1, int(argmin(bounded)))
         U, t = U[:end], t[:end]
-        note = f"blows up near t = {t[-1]:.1f}"
+        note = f"Divergencia cerca de t = {t[-1]:.3g} s"
     return t, U, note
 
 
@@ -186,7 +188,8 @@ def _calculate_solution(params, cancelled):
         t = linspace(tn[0], tn[-1], N_display)
         U = array([interp(t, tn, Un[:, j]) for j in range(Un.shape[1])]).T
     else:
-        t, U = tn, Un
+        indices = linspace(0, len(tn)-1, min(len(tn), N_display), dtype=int)
+        t, U = tn[indices], Un[indices]
     stride = max(1, (len(t) + N_draw - 1) // N_draw)
     d = arange(0, len(t), stride)
     if d[-1] != len(t) - 1:
@@ -198,8 +201,8 @@ def _calculate_solution(params, cancelled):
         notes.append("I1 + I2 < I3: no real body")
     return dict(nodes=(tn, Un), t=t, U=U, cpu=time.perf_counter()-start, notes=notes,
                 note=note, k=0, tp=0.0, d=d, trail_tips=tips,
-                flips=Zero_crossings(t, U[:, params["axis"]]), window=min(15., .2*t[-1]),
-                dt_used=(tn[-1]-tn[0])/(len(tn)-1), drifts=[v.max() for v in Drifts(Un, I)])
+                flips=Zero_crossings(tn, Un[:, params["axis"]]), window=min(15., .2*t[-1]),
+                dt_used=tn[1]-tn[0], drifts=[v.max() for v in Drifts(Un, I)])
 
 
 def _calculate_runs(snapshot, cancelled):
@@ -211,7 +214,7 @@ def _calculate_runs(snapshot, cancelled):
             note = snapshot["note"]
         else:
             t, U, note = Integrate(_checked_field(snapshot["I"], cancelled), snapshot["tf"], U0, scheme,
-                                   snapshot["dt"] if snapshot["adaptive"] else snapshot["dt_used"],
+                                   snapshot["dt"],
                                    snapshot["adaptive"], snapshot["tol"])
         runs[name] = dict(t=t, U=U, note=note)
     return runs
@@ -342,8 +345,8 @@ def build_gui(animate=True):
 
     # ------------------------------------------------------------ calculo
     def read_controls():
-        params = dict(I=(S_I1.val, S_I2.val, S_I3.val), Omega=S_W.val, dt=10**S_dt.val, eps=10**S_eps.val,
-                 tf=S_tf.val, tol=10**S_tol.val, name=R_scheme.value_selected,
+        params = dict(I=(S_I1.val, S_I2.val, S_I3.val), Omega=S_W.val, dt=S_dt.val, eps=S_eps.val,
+                 tf=S_tf.val, tol=S_tol.val, name=R_scheme.value_selected,
                  adaptive=R_mode.value_selected == modes[1], axis=axes_names[R_axis.value_selected])
         params["scheme"] = schemes[params["name"]]
         return params
@@ -381,7 +384,7 @@ def build_gui(animate=True):
         S.update(params)
         S.update(result)
         S.update(version=S["version"]+1, busy=False, clock=time.perf_counter(), last_frame=None)
-        notes_text.set_text("\n".join(S["notes"]))
+        notes_text.set_text("")
         transport.set_text(f"{S['name']}  ·  {len(S['nodes'][0])-1:,} pasos  ·  {S['cpu']:.2f} s")
         show_page(S["page"], force=True)
 
@@ -508,7 +511,7 @@ def build_gui(animate=True):
                     page.legend_text.set_position((content_x(.355), .827))
                     page.legend_text.set_fontsize(9)
                     page.legend_text.set_text("Rojo: amplificación extra · Azul: amortiguamiento extra · Puntos: λΔt del estado actual")
-                warning.set_text("Calculando nueva trayectoria…" if S["busy"] else "Listo · arrastra las vistas 3D o pulsa 1–4 para explorar")
+                warning.set_text("Calculando nueva trayectoria…" if S["busy"] else " · ".join(S["notes"]) or "Listo")
             else:
                 warning.set_text(loading)
             for card in attitude_cards:
@@ -646,11 +649,14 @@ def build_gui(animate=True):
             r.eventson = False
             r.set_active(active)
             r.eventson = True
+        S_tol.ax.set_visible(False)
         S.update(speed=1., playing=True)
         B_play.label.set_text("Pausar")
         compute()
 
     def on_key(event):
+        if any(control.capturekeystrokes for control in (S_eps, S_dt, S_tol)):
+            return
         key, labels = event.key, list(schemes)
         if key in ("1", "2", "3", "4"):
             show_page(int(key) - 1)
@@ -702,14 +708,12 @@ def build_gui(animate=True):
         boxstyle="round,pad=0,rounding_size=0.018", transform=fig.transFigure,
         fc=C["panel"], ec=C["line"], lw=.8, zorder=-3))
     fig.text(.030, .950, "ÓRBITA", fontsize=29, fontweight="bold", color=C["accent"])
-    fig.text(.031, .924, "C U A D E R N O   D E   D I N Á M I C A", fontsize=7.8, color=C["muted"])
-    fig.text(.031, .888, "PEI 01   /   SÓLIDO LIBRE", fontsize=9, color=C["text"], fontweight="bold")
-    fig.text(.266, .952, "La belleza de un giro imperfecto.", fontsize=27, fontweight="bold", color=C["ink"])
-    fig.text(.267, .920, "EXPERIMENTO 01     /     Teorema del eje intermedio", fontsize=10, color=C["muted"])
+    fig.text(.031, .924, "DINÁMICA DEL SÓLIDO", fontsize=9, color=C["muted"])
+    fig.text(.266, .952, "Teorema del eje intermedio", fontsize=27, fontweight="bold", color=C["ink"])
+    fig.text(.267, .920, "Ajusta los parámetros y compara los métodos", fontsize=10, color=C["muted"])
     fig.text(.982, .950, "I₁ < I₂ < I₃", fontsize=17, ha="right", color=C["accent"], family="monospace")
     transport = fig.text(.982, .920, "Preparando simulación", fontsize=8.5, color=C["muted"], ha="right")
     warning = fig.text(.267, .032, "", fontsize=9, color=C["muted"], va="center")
-    fig.text(.982, .032, "AMPLIACIÓN DE MATEMÁTICAS / 01", fontsize=8, color=C["accent"], ha="right")
     perf_text = fig.text(.982, .084, "", fontsize=8, color=C["warn"], ha="right", animated=True)
 
     pages = [_AttitudePage(fig, S), Invariants_page(fig, S), Stability_page(fig, S),
@@ -739,7 +743,9 @@ def build_gui(animate=True):
     original_info = attitude.write_info
     def compact_info():
         original_info()
-        attitude.info_labels.set_text("Autovalor λ\nPolhode\nPeriodo exacto\nPeriodo medido\nΔ 2T · L²\nΔ |q|\nMétodo\nPasos · cálculo")
+        values = attitude.info.get_text().splitlines()
+        attitude.info_labels.set_text("Autovalor λ\nPeriodo exacto\nDeriva 2T · L²\nDeriva |q|")
+        attitude.info.set_text("\n".join(values[i] for i in (0, 2, 4, 5)))
         attitude.badge.set_text(attitude.badge.get_text().replace("UNSTABLE  ·  saddle", "INESTABLE").replace("STABLE  ·  centre", "ESTABLE"))
     attitude.write_info = compact_info
     # Micrográfica de transporte: el tiempo se sigue leyendo de la solución real.
@@ -778,7 +784,7 @@ def build_gui(animate=True):
     placeholder = fig.text(.62, .48, "Preparando simulación…", ha="center", va="center", fontsize=13,
         color=C["muted"], linespacing=2, bbox=dict(boxstyle="round,pad=2", fc=C["panel"], ec=C["line"]))
     tabs = []
-    for i, label in enumerate(("01 / Movimiento", "02 / Conservación", "03 / Estabilidad", "04 / Precisión")):
+    for i, label in enumerate(("Movimiento", "Conservación", "Estabilidad", "Precisión")):
         b = Button(fig.add_axes([.266 + .183*i, .861, .174, .037]), label,
                    color=C["bg"], hovercolor=C["soft"])
         b.label.set_fontsize(10); b.label.set_fontweight("bold"); b.label.set_color(C["text"])
@@ -811,10 +817,38 @@ def build_gui(animate=True):
     S_I2  = slider(.080, .767, .122, r"$I_2$", .2, 5., 2.)
     S_I3  = slider(.080, .731, .122, r"$I_3$", .2, 5., 3.)
     S_W   = slider(.080, .695, .122, r"$\Omega$", .1, 3., 1.)
-    S_eps = slider(.080, .659, .122, r"$\log_{10}\varepsilon$", -8., -1., -3.)
-    S_dt  = slider(.080, .582, .122, r"$\log_{10}\Delta t$", -3., -.3, -1.7)
-    S_tf  = slider(.080, .545, .122, r"$t_f$", 10., 150., 80., "%.0f")
-    S_tol = slider(.080, .508, .122, r"$\log_{10}$tol", -11., -3., -6.)
+    def number(y, label, initial, minimum, maximum):
+        field = TextBox(fig.add_axes([.100, y-.004, .110, .028]), label + "  ",
+                        initial=f"{initial:g}", color=C["bg"], hovercolor=C["soft"])
+        field.val = initial
+        field.label.set_fontsize(10)
+        field.text_disp.set_fontsize(10)
+        for spine in field.ax.spines.values():
+            spine.set_edgecolor(C["line"])
+
+        def submitted(text):
+            try:
+                value = float(text.replace(",", "."))
+                if not isfinite(value) or not minimum <= value <= maximum:
+                    raise ValueError()
+            except ValueError:
+                status(f"{label}: introduce un valor entre {minimum:g} y {maximum:g}", True)
+                return
+            field.val = value
+            schedule()
+
+        field.on_submit(submitted)
+        def reset_number():
+            field.val = initial
+            field.set_val(f"{initial:g}")
+        field.reset = reset_number
+        return field
+
+    S_eps = number(.659, "ε", .001, 0., 1.)
+    S_dt  = number(.582, "Δt (s)", .02, 1e-6, 2.)
+    S_tf  = slider(.080, .539, .122, r"$t_f$", 1., 150., 80., "%.0f")
+    S_tol = number(.499, "Tolerancia", 1e-6, 1e-12, .01)
+    S_tol.ax.set_visible(False)
 
     def button(x, y, label, callback, width=.089, primary=False):
         b = Button(fig.add_axes([x, y, width, .035]), label,
@@ -842,6 +876,10 @@ def build_gui(animate=True):
 
     R_scheme = radio([.030, .365, .192, .090], list(schemes), 2)
     R_mode = radio([.030, .300, .192, .060], list(modes), 0)
+    def mode_changed(label):
+        S_tol.ax.set_visible(label == modes[1])
+        fig.canvas.draw_idle()
+    R_mode.on_clicked(mode_changed)
     R_axis = radio([.030, .181, .192, .090], list(axes_names), 1)
     notes_text = fig.text(.031, .169, "", fontsize=7.5, color=C["warn"], va="top", linespacing=1.3)
     fig.text(.031, .087, "Espacio / pausa    ·    1–4 / vistas\n← → tiempo    ·    + − velocidad\nArrastra el 3D    ·    V / cámara    ·    F / ampliar",
