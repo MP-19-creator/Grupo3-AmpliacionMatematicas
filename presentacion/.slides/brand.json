@@ -1,0 +1,17 @@
+{
+  "fidelity": "brand",
+  "fonts": { "heading": "Calibri", "body": "Calibri" },
+  "colours": {
+    "ink": "#171717",
+    "paper": "#FFFFFF",
+    "accent": "#6D28D9",
+    "muted": "#6B7280",
+    "lilac": "#A78BFA",
+    "mist": "#F3F0FB"
+  },
+  "tokens": {
+    "grid": { "margin_x": 548640, "margin_top": 182880, "margin_bottom": 182880, "columns": 12, "gutter": 203606, "baseline": 91211 },
+    "type_scale": { "display": 54, "title": 36, "h1": 26, "body": 17, "caption": 12 },
+    "shape": { "corner": "rounded" }
+  }
+}

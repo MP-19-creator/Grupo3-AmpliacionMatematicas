@@ -1,0 +1,48 @@
+{
+  "Euler": {
+    "max_rel_diff": 3.4507005692221933e-16,
+    "failed_points": 0,
+    "points": 19285
+  },
+  "Implicit Euler": {
+    "max_rel_diff": 2.443378832595036e-12,
+    "failed_points": 1,
+    "points": 19285
+  },
+  "Crank-Nicolson": {
+    "max_rel_diff": 1.728304999115684e-14,
+    "failed_points": 0,
+    "points": 19285
+  },
+  "RK4": {
+    "max_rel_diff": 1.027944959699178e-14,
+    "failed_points": 0,
+    "points": 19285
+  },
+  "rigid_body_default": {
+    "I": [
+      1.0,
+      2.0,
+      3.0
+    ],
+    "Omega": 1.0,
+    "dt": 0.02,
+    "z_axis": {
+      "0": [
+        "0.011547005383792514j",
+        "-0.011547005383792514j"
+      ],
+      "1": [
+        "(0.011547005383792514+0j)",
+        "(-0.011547005383792514-0j)"
+      ],
+      "2": [
+        "0.02j",
+        "-0.02j"
+      ]
+    },
+    "z_quaternion": "\u00b10.01i",
+    "rk4_dt_max_axis1": 4.898979485566357,
+    "rk4_dt_max_axis3": 2.8284271247461903
+  }
+}
