@@ -8,6 +8,8 @@ from numpy import array, clip, isfinite, searchsorted
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 from matplotlib.widgets import Slider, Button, RadioButtons, TextBox
+from matplotlib.transforms import Bbox, TransformedBbox
+from matplotlib.text import Text
 
 from active.gui_reactive.style import C, aplicar_estilo
 from active.gui_reactive.page_attitude import Pagina_movimiento
@@ -44,18 +46,27 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
         figura.canvas.draw_idle()
 
     def marcar_cambios(_=None):
-        estado['cambios_pendientes'] = True
-        mostrar_aviso("Parámetros modificados · pulsa Calcular para aplicarlos")
+        estado['cambios_pendientes'] = leer_parametros() != estado.get('parametros_aplicados')
+        mostrar_aviso("Cambios pendientes · pulsa Calcular" if estado['cambios_pendientes'] else "Listo")
 
     # Al pulsar Calcular: leer valores, avisar al principal y recibir resultados.
     def solicitar_calculo(_=None):
         parametros = leer_parametros()
+        if estado.get('parametros_aplicados') == parametros:
+            estado['cambios_pendientes'] = False
+            estado.pop('error', None)
+            estado.update(indice_actual=0, tiempo_actual=0.)
+            mostrar_pagina(estado['pagina_actual'])
+            return
+        mostrar_aviso("Calculando…")
+        figura.canvas.draw()
         try:
             resultado = al_calcular(parametros)
         except (ArithmeticError, ValueError, RuntimeError) as exc:
             mostrar_aviso(f"No se pudo calcular la trayectoria: {exc}", True)
             return
         estado.update(resultado)
+        estado['parametros_aplicados'] = dict(parametros)
         estado['cambios_pendientes'] = False
         estado.pop("error", None)
         # Estos análisis dejan de corresponder a la nueva trayectoria.
@@ -67,6 +78,7 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
 
     # Al cambiar de pagina: pedir los datos que faltan y dibujarlos.
     def mostrar_pagina(numero_pagina):
+        estado['fondo'] = None
         estado['pagina_actual'] = numero_pagina
         pagina = paginas[numero_pagina]
         estado['lista_para_dibujar'] = False
@@ -79,17 +91,24 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
         for fondo in fondos_movimiento:
             fondo.set_visible(numero_pagina == 0)
         texto_espera.set_visible(True)
+        texto_espera.set_text("Preparando vista…")
         try:
             if pagina.necesita_dibujo:
+                figura.canvas.draw()
                 estado.update(al_preparar_pagina(numero_pagina, float(paginas[3].control_tf_estudio.val)))
                 pagina.dibujar()
                 pagina.necesita_dibujo = False
+                if numero_pagina == 3:
+                    estado['estudio_pendiente'] = False
+                ajustar_tamano()
             pagina.mostrar(True)
             pagina.dibujar_instante(estado['indice_actual'])
             texto_espera.set_visible(False)
             estado['lista_para_dibujar'] = True
             if estado['cambios_pendientes']:
-                mostrar_aviso("Parámetros modificados · pulsa Calcular para aplicarlos")
+                mostrar_aviso("Cambios pendientes · pulsa Calcular")
+            elif estado.get('estudio_pendiente'):
+                mostrar_aviso("Intervalo pendiente · pulsa Calcular en Precisión")
             else:
                 mostrar_aviso(" · ".join(estado['avisos']) or "Listo")
         except (ArithmeticError, ValueError, RuntimeError) as exc:
@@ -102,33 +121,48 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
 
     def cambiar_intervalo_estudio(_=None):
         paginas[3].necesita_dibujo = True
-        estado['cambios_pendientes'] = True
-        mostrar_aviso("Intervalo del estudio modificado · pulsa Calcular para actualizarlo")
+        estado['estudio_pendiente'] = True
+        mostrar_aviso("Intervalo pendiente · pulsa Calcular")
 
     # Cada tic recorre la solucion ya calculada; no vuelve a integrar.
     def avanzar_animacion():
         if estado['cerrada'] or not estado['lista_para_dibujar'] or not estado['reproduciendo']:
+            if estado['temporizador'] is not None:
+                estado['temporizador'].interval = 100
             return
-        tiempo_real = time.perf_counter()
+        inicio_fotograma = tiempo_real = time.perf_counter()
         tiempo_transcurrido = min(tiempo_real - estado['reloj'], .25)
         estado['reloj'] = tiempo_real
         tiempo_final = estado["t"][-1]
         avance = tiempo_transcurrido * estado['velocidad'] * tiempo_final / duracion_reproduccion
         tiempo_siguiente = (estado['tiempo_actual'] + avance) % tiempo_final
         mostrar_instante(tiempo_siguiente)
+        if estado['temporizador'] is not None:
+            # Tk programa el siguiente tic DESPUÉS de este callback: descontar
+            # el dibujo evita sumar una espera completa al coste del fotograma.
+            coste_ms = (time.perf_counter() - inicio_fotograma) * 1000
+            # TimerTk trata 0 mediante after_idle: cede al resto de eventos
+            # sin añadir el retardo mínimo de un after(1) en Windows.
+            espera_minima = 0 if repintado_parcial else 1
+            estado['temporizador'].interval = max(espera_minima, round(1000 / 30 - coste_ms))
 
     def mostrar_instante(tiempo_elegido):
+        indice_anterior = estado['indice_actual']
         estado['tiempo_actual'] = float(clip(tiempo_elegido, 0, estado["t"][-1]))
         estado['indice_actual'] = min(int(searchsorted(estado["t"], estado['tiempo_actual'])), len(estado["t"]) - 1)
         if estado['lista_para_dibujar'] and estado['pagina_actual'] != 3:
             paginas[estado['pagina_actual']].dibujar_instante(estado['indice_actual'])
-            figura.canvas.draw_idle()
+            if indice_anterior != estado['indice_actual'] or estado.get('fondo') is None:
+                repintar_instante()
 
     def pausar_reanudar(_=None):
         estado['reproduciendo'] = not estado['reproduciendo']
         estado['reloj'] = time.perf_counter()
         boton_pausa.label.set_text("Pausar" if estado['reproduciendo'] else "Reproducir")
+        if estado['temporizador'] is not None:
+            estado['temporizador'].interval = 33 if estado['reproduciendo'] else 100
         mostrar_instante(estado['tiempo_actual'])
+        figura.canvas.draw_idle()
 
     def restablecer_parametros(_=None):
         for control in controles_parametros:
@@ -144,7 +178,16 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
             selector.set_active(seleccionado)
             selector.eventson = True
         control_tolerancia.ax.set_visible(False)
+        sincronizar_dt()
+        paginas[3].control_tf_estudio.eventson = False
+        paginas[3].control_tf_estudio.reset()
+        paginas[3].control_tf_estudio.eventson = True
+        if estado.get('estudio_error', {}).get('tf') != paginas[3].control_tf_estudio.val:
+            paginas[3].necesita_dibujo = True
         estado.update(velocidad=1., reproduciendo=True)
+        if estado['temporizador'] is not None:
+            estado['temporizador'].interval = 33
+        estado.update(tiempo_actual=0., indice_actual=0)
         boton_pausa.label.set_text("Pausar")
         solicitar_calculo()
 
@@ -216,18 +259,16 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
         fc=C["panel"], ec=C["line"], lw=.8, zorder=-3))
     figura.text(.030, .950, "ÓRBITA", fontsize=29, fontweight="bold", color=C["accent"])
     figura.text(.031, .924, "DINÁMICA DEL SÓLIDO", fontsize=9, color=C["muted"])
-    figura.text(.266, .952, "Teorema del eje intermedio", fontsize=27, fontweight="bold", color=C["ink"])
-    figura.text(.267, .920, "Ajusta los parámetros y compara los métodos", fontsize=10, color=C["muted"])
+    figura.text(.266, .952, "Eje intermedio", fontsize=24, fontweight="bold", color=C["ink"])
     figura.text(.982, .950, "I₁ < I₂ < I₃", fontsize=17, ha="right", color=C["accent"], family="monospace")
     texto_resumen = figura.text(.982, .920, "Preparando simulación", fontsize=8.5, color=C["muted"], ha="right")
     texto_aviso = figura.text(.267, .032, "", fontsize=9, color=C["muted"], va="center")
 
-    paginas = [
-        Pagina_movimiento(figura, estado),
-        Pagina_conservacion(figura, estado),
-        Pagina_estabilidad(figura, estado),
-        Pagina_precision(figura, estado),
-    ]
+    paginas = []
+    for tipo_pagina in (Pagina_movimiento, Pagina_conservacion, Pagina_estabilidad, Pagina_precision):
+        pagina = tipo_pagina(figura, estado)
+        pagina.mostrar(False)
+        paginas.append(pagina)
     for pagina in paginas:
         for ax in pagina.graficas:
             x, y, w, h = ax.get_position().bounds
@@ -238,16 +279,15 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
             texto.set_position((posicion_horizontal(x), posicion_vertical(y)))
             texto.set_fontsize(min(texto.get_fontsize(), 9))
 
-    paginas[2].texto_leyenda.set_position((posicion_horizontal(.355), .827))
-    paginas[2].texto_leyenda.set_fontsize(9)
-    paginas[2].texto_leyenda.set_text("Rojo: amplificación extra · Azul: amortiguamiento extra · Puntos: λΔt del estado actual")
+    paginas[2].texto_leyenda.set_fontsize(8)
+    paginas[2].texto_leyenda.set_text("Rojo: amplifica · Azul: amortigua · Puntos: λΔt actual")
 
     pagina_movimiento = paginas[0]
     pagina_movimiento.textos[0].set_text("ORIENTACIÓN / referencia inercial")
     pagina_movimiento.textos[1].set_text("POINSOT / espacio de fases")
     pagina_movimiento.textos[2].set_text("TEORÍA Y SIMULACIÓN")
     pagina_movimiento.titulo_volteos.set_text("VOLTEOS DEL EJE DE GIRO")
-    pagina_movimiento.grafica_velocidades.set_title("VELOCIDAD ANGULAR / ejes del cuerpo", loc="left", fontsize=9, color=C["muted"])
+    pagina_movimiento.grafica_velocidades.set_title("VELOCIDAD ANGULAR (rad/s) / ejes del cuerpo", loc="left", fontsize=9, color=C["muted"])
     pagina_movimiento.etiquetas_informacion.set_fontsize(8)
     pagina_movimiento.texto_informacion.set_fontsize(8)
     pagina_movimiento.indicador_estabilidad.set_fontsize(10)
@@ -280,8 +320,8 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
         figura.text(.031, y, numero, fontsize=9, color=C["accent"], fontweight="bold", family="monospace")
         figura.text(.055, y, titulo, fontsize=9, color=C["text"], fontweight="bold")
         figura.add_artist(plt.Line2D([.031, .220], [y-.012, y-.012], transform=figura.transFigure, color=C["line"], lw=.8))
-    dibujar_seccion(.846, "01", "PROPIEDADES DEL SÓLIDO")
-    dibujar_seccion(.625, "02", "RESOLUCIÓN TEMPORAL")
+    dibujar_seccion(.846, "01", "SÓLIDO")
+    dibujar_seccion(.625, "02", "TIEMPO")
     dibujar_seccion(.467, "03", "INTEGRACIÓN")
     dibujar_seccion(.285, "04", "EJE DE GIRO INICIAL")
 
@@ -326,6 +366,25 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
 
     control_perturbacion = crear_campo_numerico(.659, "ε", .001, 0., 1.)
     control_dt  = crear_campo_numerico(.582, "Δt (s)", .02, 1e-6, 2.)
+    # Deslizador logarítmico vinculado al campo preciso; solo cambia la entrada.
+    from math import log10
+    control_dt_deslizador = crear_deslizador(.080, .563, .122, '', -6., log10(2.), log10(.02))
+    control_dt_deslizador.valtext.set_visible(False)
+
+    def deslizar_dt(valor):
+        control_dt.val = 10.**valor
+        control_dt.eventson = False
+        control_dt.set_val(f'{control_dt.val:.9g}')
+        control_dt.eventson = True
+        marcar_cambios()
+
+    def sincronizar_dt(_=None):
+        control_dt_deslizador.eventson = False
+        control_dt_deslizador.set_val(log10(control_dt.val))
+        control_dt_deslizador.eventson = True
+
+    control_dt_deslizador.on_changed(deslizar_dt)
+    control_dt.on_submit(sincronizar_dt)
     control_tf  = crear_deslizador(.080, .539, .122, r"$t_f$", 1., 150., 80., "%.0f")
     control_tolerancia = crear_campo_numerico(.499, "Tolerancia", 1e-6, 1e-12, .01)
     control_tolerancia.ax.set_visible(False)
@@ -359,8 +418,79 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
     selector_metodo = crear_selector([.030, .365, .192, .090], list(nombres_metodos), 2)
     selector_paso = crear_selector([.030, .300, .192, .060], list(tipos_paso), 0)
     selector_eje = crear_selector([.030, .181, .192, .090], list(nombres_ejes), 1)
-    figura.text(.031, .065, "Espacio / pausa    ·    1–4 / vistas\n← → tiempo    ·    + − velocidad\nArrastra el 3D    ·    V / cámara    ·    F / ampliar",
-             fontsize=7.5, color=C["muted"], va="top", linespacing=1.7)
+    figura.text(.031, .065, "Espacio: pausa · 1–4: vistas\n← →: tiempo · + −: velocidad\nV: cámara · F: ampliar",
+             fontsize=7.5, color=C["muted"], va="top", linespacing=1.3)
+
+    # Fondo estático con invalidación al redimensionar, girar o cambiar de vista.
+    # TkAgg permite blit. El cuerpo se dibuja como eje 3D completo para
+    # mantener la ordenación de profundidad; Poinsot conserva su geometría
+    # estática y proyecta únicamente sus tres líneas móviles.
+    repintado_parcial = figura.canvas.supports_blit and 'tkagg' in plt.get_backend().lower()
+    movimiento = paginas[0]
+    artistas_moviles = [
+        [movimiento.grafica_cuerpo, *movimiento.lineas,
+         movimiento.cursor_tiempo, movimiento.reloj, movimiento.contador_volteos,
+         movimiento.velocidad, movimiento.progreso, movimiento.marcador_tiempo],
+        paginas[1].artistas_moviles,
+        paginas[2].artistas_moviles,
+        [],
+    ]
+    if repintado_parcial:
+        for grupo in artistas_moviles:
+            for artista in grupo:
+                artista.set_animated(True)
+
+    def moviles_actuales():
+        grupo = artistas_moviles[estado['pagina_actual']]
+        if estado['pagina_actual'] == 0 and hasattr(movimiento, 'punto_actual'):
+            return [*grupo, movimiento.trayectoria_reciente, movimiento.halo, movimiento.punto_actual]
+        return grupo
+
+    def dibujar_moviles():
+        for artista in moviles_actuales():
+            if artista.get_visible() and (artista.axes is None or artista.axes.get_visible()):
+                figura.draw_artist(artista)
+
+    def guardar_fondo(evento):
+        if repintado_parcial and figura.canvas.is_saving():
+            # Figure excluye ejes animados también al exportar; sus líneas
+            # animadas sí se incluyen automáticamente en savefig.
+            if estado['pagina_actual'] == 0 and movimiento.grafica_cuerpo.get_visible():
+                movimiento.grafica_cuerpo.draw(evento.renderer)
+            estado['fondo'] = None
+        elif repintado_parcial:
+            estado['fondo'] = figura.canvas.copy_from_bbox(region_animacion)
+            dibujar_moviles()
+            figura.canvas.blit(region_animacion)
+
+    def repintar_instante():
+        inicio = time.perf_counter()
+        if repintado_parcial and estado.get('fondo') is not None:
+            figura.canvas.restore_region(estado['fondo'])
+            dibujar_moviles()
+            figura.canvas.blit(region_animacion)
+        else:
+            figura.canvas.draw_idle()
+        estado['tiempo_dibujo_instante'] = time.perf_counter() - inicio
+
+    def ajustar_tamano(_=None):
+        estado['fondo'] = None
+        # Las posiciones siguen normalizadas; el texto se adapta al lienzo real.
+        factor = min(1., max(.78, figura.bbox.width / 1500))
+        textos_actuales = set(figura.findobj(Text))
+        for texto in set(tamanos_texto) - textos_actuales:
+            del tamanos_texto[texto]
+        for texto in textos_actuales:
+            if texto not in tamanos_texto:
+                tamanos_texto[texto] = texto.get_fontsize()
+        for texto, tamano in tamanos_texto.items():
+            texto.set_fontsize(max(7., tamano * factor))
+
+    region_animacion = TransformedBbox(Bbox.from_extents(.25, .075, 1., .85), figura.transFigure)
+    tamanos_texto = {t: t.get_fontsize() for t in figura.findobj(Text)}
+    figura.canvas.mpl_connect('resize_event', ajustar_tamano)
+    figura.canvas.mpl_connect('draw_event', guardar_fondo)
+    ajustar_tamano()
 
 
     # 4. EVENTOS. Conectar cada control con la accion que debe ejecutar.
@@ -388,7 +518,7 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
     # 5. ANIMACION. El temporizador llama a avanzar_animacion con la ventana abierta.
     estado['temporizador'] = None
     if animar:
-        estado['temporizador'] = figura.canvas.new_timer(interval=40)
+        estado['temporizador'] = figura.canvas.new_timer(interval=33)
         estado['temporizador'].add_callback(avanzar_animacion)
         estado['temporizador'].start()
 
@@ -405,6 +535,7 @@ def crear_interfaz(nombres_metodos, al_calcular, al_preparar_pagina, animar=True
         paginas=paginas,
         texto_aviso=texto_aviso,
         controles_parametros=controles_parametros,
+        control_dt_deslizador=control_dt_deslizador,
         selector_metodo=selector_metodo,
         selector_paso=selector_paso,
         selector_eje=selector_eje,

@@ -1,0 +1,196 @@
+{
+  "backend": "TkAgg",
+  "version": "3.11.2",
+  "parameters": {
+    "I": [
+      1,
+      2,
+      3
+    ],
+    "Omega": 1,
+    "eps": 0.001,
+    "tf": 80,
+    "dt": 0.02,
+    "tol": 1e-06,
+    "metodo": "RK4",
+    "adaptativo": false,
+    "eje": 1
+  },
+  "pages": [
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 1,
+      "prepare": 0.0010508999694138765,
+      "update_median": 0.0010593999759294093,
+      "draw_median": 0.03511304996209219,
+      "frame_median": 0.036194149986840785,
+      "frame_p95": 0.04275349997333251
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 2,
+      "prepare": 1.263948900043033,
+      "update_median": 8.459988748654723e-05,
+      "draw_median": 0.007983049959875643,
+      "frame_median": 0.008076900034211576,
+      "frame_p95": 0.010379805037518963
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 3,
+      "prepare": 0.5470388999674469,
+      "update_median": 0.00016484997468069196,
+      "draw_median": 0.015624749998096377,
+      "frame_median": 0.01578135002637282,
+      "frame_p95": 0.02309314991580322
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 4,
+      "prepare": 8.424359800061211,
+      "update_median": 1.4349992852658033e-05,
+      "draw_median": 0.0,
+      "frame_median": 1.4349992852658033e-05,
+      "frame_p95": 1.5510001685470342e-05
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 1,
+      "prepare": 0.0011489999014884233,
+      "update_median": 0.0008676000870764256,
+      "draw_median": 0.026524799992330372,
+      "frame_median": 0.027539000031538308,
+      "frame_p95": 0.03880359499598853
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 2,
+      "prepare": 0.0004832999547943473,
+      "update_median": 0.00011920003453269601,
+      "draw_median": 0.010770599998068064,
+      "frame_median": 0.010882099973969162,
+      "frame_p95": 0.018131569994147865
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 3,
+      "prepare": 0.0007024999940767884,
+      "update_median": 0.0001797000295482576,
+      "draw_median": 0.012340050016064197,
+      "frame_median": 0.012538749957457185,
+      "frame_p95": 0.013126675016246736
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 4,
+      "prepare": 0.0006831000791862607,
+      "update_median": 1.2950098607689142e-05,
+      "draw_median": 0.0,
+      "frame_median": 1.2950098607689142e-05,
+      "frame_p95": 1.6134942416101688e-05
+    }
+  ],
+  "repeat_calculate": {
+    "seconds": 0.5907241000095382,
+    "calls": {
+      "integrar_trayectoria": 0,
+      "preparar_datos_movimiento": 0,
+      "calcular_trayectoria": 0,
+      "comparar_metodos": 0,
+      "preparar_datos_estabilidad": 0,
+      "calcular_estudio_error": 0
+    }
+  },
+  "revisit_calls": {
+    "integrar_trayectoria": 0,
+    "preparar_datos_movimiento": 0,
+    "calcular_trayectoria": 0,
+    "comparar_metodos": 0,
+    "preparar_datos_estabilidad": 0,
+    "calcular_estudio_error": 0
+  },
+  "timings": {
+    "integrar_trayectoria": [
+      0.1628844999941066,
+      0.11176640004850924,
+      0.7594898999668658
+    ],
+    "preparar_datos_movimiento": [
+      0.024288699962198734
+    ],
+    "calcular_trayectoria": [
+      0.1878748000599444
+    ],
+    "comparar_metodos": [
+      0.8729922999627888
+    ],
+    "preparar_datos_estabilidad": [
+      0.15717559994664043
+    ],
+    "calcular_estudio_error": [
+      8.169807099970058
+    ]
+  },
+  "playback": {
+    "frames": 72,
+    "fps": 21.389650656806943,
+    "interval_median_ms": 45.45250011142343,
+    "interval_p95_ms": 62.32660007663071
+  }
+}

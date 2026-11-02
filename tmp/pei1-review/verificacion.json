@@ -1,0 +1,17 @@
+[
+  "Equivalencia exacta: Euler, adaptativo=False",
+  "Equivalencia exacta: Euler, adaptativo=True",
+  "Equivalencia exacta: Crank-Nicolson, adaptativo=False",
+  "Equivalencia exacta: Crank-Nicolson, adaptativo=True",
+  "Equivalencia exacta: RK4, adaptativo=False",
+  "Equivalencia exacta: RK4, adaptativo=True",
+  "Equivalencia exacta: caso inicial completo (4001 nodos)",
+  "Cuatro pestañas: clic y teclado",
+  "Reproducción, pausa, velocidad, búsqueda temporal y cámaras",
+  "Tres métodos, tres ejes y ambos tipos de paso",
+  "Error de inercias conserva datos; reinicio con y sin cambios",
+  "Intervalo de precisión independiente y reutilización de estudios",
+  "Redimensionado de cuatro páginas; artistas estables; repintado parcial idéntico",
+  "Captura y exportación PNG con cuerpo 3D",
+  "Cierre detiene el temporizador"
+]

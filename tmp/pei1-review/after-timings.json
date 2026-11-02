@@ -1,0 +1,122 @@
+{
+  "backend": "TkAgg",
+  "version": "3.11.2",
+  "pages": [
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 1,
+      "prepare": 0.0019296000245958567,
+      "update_median": 0.055211300030350685,
+      "draw_median": 0.3027297999942675
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 2,
+      "prepare": 0.5619575999444351,
+      "update_median": 0.020978400018066168,
+      "draw_median": 0.4207440000027418
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 3,
+      "prepare": 0.314653699984774,
+      "update_median": 0.011378000024706125,
+      "draw_median": 0.38256360008381307
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 4,
+      "prepare": 5.168902600067668,
+      "update_median": 5.849997978657484e-05,
+      "draw_median": 0.2869334000861272
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 1,
+      "prepare": 0.0009988000383600593,
+      "update_median": 0.03684170008637011,
+      "draw_median": 0.22083130001556128
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 2,
+      "prepare": 0.0005937000969424844,
+      "update_median": 0.007206500042229891,
+      "draw_median": 0.302815500064753
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 3,
+      "prepare": 0.0003698000218719244,
+      "update_median": 0.006973400013521314,
+      "draw_median": 0.29433820000849664
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 4,
+      "prepare": 0.0003551000263541937,
+      "update_median": 6.420002318918705e-05,
+      "draw_median": 0.2842604999896139
+    }
+  ],
+  "repeat_calculate": {
+    "seconds": 0.29332729999441653,
+    "calls": {
+      "integrar_trayectoria": 0,
+      "preparar_datos_movimiento": 0,
+      "comparar_metodos": 0,
+      "preparar_datos_estabilidad": 0,
+      "calcular_estudio_error": 0
+    }
+  },
+  "revisit_calls": {
+    "integrar_trayectoria": 0,
+    "preparar_datos_movimiento": 0,
+    "comparar_metodos": 0,
+    "preparar_datos_estabilidad": 0,
+    "calcular_estudio_error": 0
+  },
+  "timings": {
+    "integrar_trayectoria": [
+      0.1740597999887541,
+      0.05321369995363057,
+      0.34688179998192936
+    ],
+    "preparar_datos_movimiento": [
+      0.02601850009523332
+    ],
+    "comparar_metodos": [
+      0.4006992999929935
+    ],
+    "preparar_datos_estabilidad": [
+      0.09915520006325096
+    ],
+    "calcular_estudio_error": [
+      5.026503099943511
+    ]
+  }
+}

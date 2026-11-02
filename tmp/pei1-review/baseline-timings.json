@@ -1,0 +1,198 @@
+{
+  "backend": "TkAgg",
+  "version": "3.11.2",
+  "parameters": {
+    "I": [
+      1,
+      2,
+      3
+    ],
+    "Omega": 1,
+    "eps": 0.001,
+    "tf": 80,
+    "dt": 0.02,
+    "tol": 1e-06,
+    "metodo": "RK4",
+    "adaptativo": false,
+    "eje": 1
+  },
+  "pages": [
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 1,
+      "prepare": 0.0006687999702990055,
+      "update_median": 0.0008449000306427479,
+      "draw_median": 0.321180600032676,
+      "frame_median": 0.3221737499698065,
+      "frame_p95": 0.39863724494935004
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 2,
+      "prepare": 0.4658463998930529,
+      "update_median": 0.00013260002015158534,
+      "draw_median": 0.4588949999306351,
+      "frame_median": 0.45902705000480637,
+      "frame_p95": 0.579902234993642
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 3,
+      "prepare": 0.15964440000243485,
+      "update_median": 0.00016519997734576464,
+      "draw_median": 0.49357649992452934,
+      "frame_median": 0.4937288999790326,
+      "frame_p95": 0.5604259499872569
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "canvas": [
+        1280,
+        760
+      ],
+      "page": 4,
+      "prepare": 7.623175399960019,
+      "update_median": 8.500006515532732e-06,
+      "draw_median": 0.0,
+      "frame_median": 8.500006515532732e-06,
+      "frame_p95": 2.27499927859753e-05
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 1,
+      "prepare": 0.0017891000024974346,
+      "update_median": 0.0009148500394076109,
+      "draw_median": 0.3997500999830663,
+      "frame_median": 0.4003240499878302,
+      "frame_p95": 0.5626341101247816
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 2,
+      "prepare": 0.00039770000148564577,
+      "update_median": 0.0001241000136360526,
+      "draw_median": 0.4511134000495076,
+      "frame_median": 0.4512466000742279,
+      "frame_p95": 0.5442935050989035
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 3,
+      "prepare": 0.0003549999091774225,
+      "update_median": 0.00017344998195767403,
+      "draw_median": 0.5724613499478437,
+      "frame_median": 0.5726851499639452,
+      "frame_p95": 0.7844382599927485
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "canvas": [
+        960,
+        640
+      ],
+      "page": 4,
+      "prepare": 0.0002764000091701746,
+      "update_median": 8.950009942054749e-06,
+      "draw_median": 0.0,
+      "frame_median": 8.950009942054749e-06,
+      "frame_p95": 1.1229969095438717e-05
+    }
+  ],
+  "repeat_calculate": {
+    "seconds": 9.491591600002721,
+    "calls": {
+      "integrar_trayectoria": 1,
+      "preparar_datos_movimiento": 1,
+      "calcular_trayectoria": 1,
+      "comparar_metodos": 0,
+      "preparar_datos_estabilidad": 0,
+      "calcular_estudio_error": 1
+    }
+  },
+  "revisit_calls": {
+    "integrar_trayectoria": 2,
+    "preparar_datos_movimiento": 0,
+    "calcular_trayectoria": 0,
+    "comparar_metodos": 1,
+    "preparar_datos_estabilidad": 1,
+    "calcular_estudio_error": 0
+  },
+  "timings": {
+    "integrar_trayectoria": [
+      0.20369910006411374,
+      0.06286099995486438,
+      0.39322700002230704,
+      0.31305810005869716,
+      0.0837543000234291,
+      0.6544717999640852
+    ],
+    "preparar_datos_movimiento": [
+      0.03608910006005317,
+      0.06641209998633713
+    ],
+    "calcular_trayectoria": [
+      0.27618420007638633,
+      0.4519033000105992
+    ],
+    "comparar_metodos": [
+      0.4568919000448659,
+      0.7394071000162512
+    ],
+    "preparar_datos_estabilidad": [
+      0.09654239995870739,
+      0.12061909993644804
+    ],
+    "calcular_estudio_error": [
+      7.612662800005637,
+      8.355593899963424
+    ]
+  }
+}

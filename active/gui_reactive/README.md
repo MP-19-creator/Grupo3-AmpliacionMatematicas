@@ -24,11 +24,59 @@ Esta avisa a `calcular_simulacion()`, definida en el principal. Desde alli se ll
 Cada iteracion obtiene U[n+1] a partir de U[n].
 
 Despues, `plt.show()` mantiene el bucle de eventos de la ventana.
-Al pulsar Calcular se repite el calculo con los nuevos parametros. La animacion
+Al pulsar Calcular se calcula con parametros nuevos y se reutiliza la solucion
+si siguen siendo los mismos. La animacion
 solo recorre resultados ya calculados.
 
 Los campos numericos se aceptan con Intro; los cambios se aplican con Calcular.
 Los calculos son sincronos: la ventana espera mientras terminan.
+
+El intervalo de Precision tiene su propia invalidacion: cambiarlo no vuelve a
+integrar la trayectoria principal. Los estudios se reutilizan por intervalo
+hasta que cambian los parametros de la simulacion.
+
+En TkAgg, comprobado con Matplotlib 3.11.2, el dibujo conserva un fondo estatico.
+Cada fotograma actualiza los artistas existentes y repinta solo la zona de
+contenido. El cuerpo se proyecta como un eje 3D completo para conservar la
+ordenacion de sus caras y estela. En Poinsot se proyectan las tres lineas moviles
+sobre las mallas estaticas. Cambiar datos, camara, controles o tamano reconstruye
+el fondo. Otros backends conservan el dibujo completo con `draw_idle`.
+
+El temporizador apunta a 30 fps, descontando el coste del dibujo de la espera
+siguiente. No acumula fotogramas pendientes y usa el reloj real para avanzar.
+La cadencia efectiva depende del equipo y del tamano de ventana; las mediciones
+y capturas reproducibles estan en `tmp/pei1-review/INFORME.md`.
+
+## Apoyos para la defensa
+
+- **Conservacion / Ver trayectorias:** proyeccion transversal de Euler,
+  Crank-Nicolson y RK4, con una referencia aproximada RK4 de paso fijo dt/4.
+  Los marcadores corresponden al mismo instante fisico. Se incluyen una
+  componente frente al tiempo, la norma de la perturbacion transversal y el
+  periodo medio medido mediante cruces ascendentes. Sin ciclos suficientes
+  se muestra un guion. `Ampliar tiempo` fija una ventana de hasta dos periodos
+  alrededor del instante elegido; el encuadre usa la referencia y una trayectoria
+  divergente puede salir de el.
+- **Conservacion / Ver con signo:** permite distinguir aumento y disminucion
+  de invariantes, con escala simetrica logaritmica y linea de cero. La tabla
+  inferior sigue indicando maximos en valor absoluto.
+- **Estabilidad / Ver amplitud y fase:** demuestra las espirales numericas,
+  |R(iy)| y el error de fase de un modo test oscilatorio. Euler implicito se
+  muestra solo mediante su funcion de estabilidad ya existente. No se ha
+  incorporado un cuarto integrador a la simulacion del satelite. El ejemplo
+  de espirales usa y=0.3 fijo; no representa la trayectoria fisica seleccionada.
+- **Movimiento:** identifica el lado de la separatriz y C=L2-2T I2.
+- **Paso temporal:** un deslizador logaritmico comparte el valor de dt con
+  el campo numerico preciso. Calcular sigue siendo quien aplica los cambios.
+
+La referencia y las medidas se preparan en el coordinador, una vez por conjunto
+de parametros. Las paginas reciben datos y actualizan artistas existentes.
+Las ecuaciones, los integradores, sus tolerancias y las soluciones originales
+no se modifican. La solucion completa de la referencia auxiliar tambien se
+conserva en `apoyo_comparacion['referencia_completa']`.
+
+Guia de demostracion, capturas y comprobaciones de estas vistas:
+`tmp/pei1-review/apoyos/LEEME.md`.
 
 ## Como leer el codigo de la GUI
 

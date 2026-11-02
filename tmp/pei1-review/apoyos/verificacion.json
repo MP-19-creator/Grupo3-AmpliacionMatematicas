@@ -1,0 +1,86 @@
+{
+  "checks": [
+    "Tres integradores originales; referencia y derivas verificadas en los nodos completos",
+    "Cuatro páginas, variantes y controles en 1600×950 y 1200×800",
+    "Cambiar representación y animar: cero integraciones y cero artistas nuevos",
+    "Repintado parcial y completo idénticos en todas las variantes",
+    "Modo oscilatorio coincide con R(z)^n; no cambia el conjunto de integradores del satélite",
+    "Guía limitada al régimen local; perturbación nula sin periodo medido ficticio",
+    "No se extrapolan los marcadores de trayectorias truncadas",
+    "Campo preciso y deslizador logarítmico Δt sincronizados y reiniciables"
+  ],
+  "frames": [
+    {
+      "view": "1600-derivas",
+      "window": "1600x950+20+20",
+      "median_ms": 7.794849982019514,
+      "p95_ms": 13.656770036322998
+    },
+    {
+      "view": "1600-signo",
+      "window": "1600x950+20+20",
+      "median_ms": 13.1375000346452,
+      "p95_ms": 18.015349941561
+    },
+    {
+      "view": "1600-trayectorias",
+      "window": "1600x950+20+20",
+      "median_ms": 13.257649959996343,
+      "p95_ms": 20.21817493368872
+    },
+    {
+      "view": "1600-detalle",
+      "window": "1600x950+20+20",
+      "median_ms": 12.321199930738658,
+      "p95_ms": 18.833730026381094
+    },
+    {
+      "view": "1600-regiones",
+      "window": "1600x950+20+20",
+      "median_ms": 12.426800036337227,
+      "p95_ms": 26.91040508216247
+    },
+    {
+      "view": "1600-modo",
+      "window": "1600x950+20+20",
+      "median_ms": 13.209950004238635,
+      "p95_ms": 17.225035035517067
+    },
+    {
+      "view": "1200-derivas",
+      "window": "1200x800+20+20",
+      "median_ms": 7.173399964813143,
+      "p95_ms": 10.869334964081645
+    },
+    {
+      "view": "1200-signo",
+      "window": "1200x800+20+20",
+      "median_ms": 8.29689996317029,
+      "p95_ms": 10.046489996602759
+    },
+    {
+      "view": "1200-trayectorias",
+      "window": "1200x800+20+20",
+      "median_ms": 8.88724997639656,
+      "p95_ms": 13.24313005898148
+    },
+    {
+      "view": "1200-detalle",
+      "window": "1200x800+20+20",
+      "median_ms": 9.657300019171089,
+      "p95_ms": 16.981195070547987
+    },
+    {
+      "view": "1200-regiones",
+      "window": "1200x800+20+20",
+      "median_ms": 7.6844500144943595,
+      "p95_ms": 13.473029900342228
+    },
+    {
+      "view": "1200-modo",
+      "window": "1200x800+20+20",
+      "median_ms": 7.81195005401969,
+      "p95_ms": 10.833965061465278
+    }
+  ]
+}

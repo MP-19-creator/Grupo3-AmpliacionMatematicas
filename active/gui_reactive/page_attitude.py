@@ -66,7 +66,7 @@ class Pagina_movimiento:
         self.marcador_tiempo, = self.linea_tiempo.plot([], [], "o", color=C["accent"], ms=7, mec=C["panel"])
         titulo = self.figura.text(posicion_horizontal(.737), posicion_vertical(.570), "RECORRIDO TEMPORAL", fontsize=8.5,
                               fontweight="bold", color=C["accent"])
-        hint = self.figura.text(posicion_horizontal(.737), posicion_vertical(.478), "Pulsa la línea para explorar el tiempo.",
+        hint = self.figura.text(posicion_horizontal(.737), posicion_vertical(.478), "",
                              fontsize=8, color=C["muted"])
         self.graficas.append(self.linea_tiempo)
         self.textos += [titulo, hint]
@@ -111,16 +111,21 @@ class Pagina_movimiento:
         self.trayectoria_reciente, = ax.plot([], [], [], color=C["polhode"], lw=2.4, solid_capstyle="round")
         self.halo, = ax.plot([], [], [], "o", color=C["point"], ms=17, alpha=0.25, mew=0)
         self.punto_actual, = ax.plot([], [], [], "o", color=C["point"], ms=7, mec="white", mew=0.8)
+        for linea in (self.trayectoria_reciente, self.halo, self.punto_actual):
+            # Los marcadores resaltan sobre las mallas de referencia. La misma
+            # ordenación se utiliza en el dibujo completo y el parcial.
+            linea.set_zorder(10)
+            linea.set_animated(ax.figure.canvas.supports_blit and 'tkagg' in plt.get_backend().lower())
         ax.set_xlim(-R, R)
         ax.set_ylim(-R, R)
         ax.set_zlim(-R, R)
         ax.set_box_aspect((1, 1, 1), zoom=1.2)
-        handles = [plt.Line2D([], [], color=C["energy"], lw=2, label="2T ellipsoid"),
-                   plt.Line2D([], [], color=C["momentum"], lw=2, label=r"$L^2$ ellipsoid"),
+        handles = [plt.Line2D([], [], color=C["energy"], lw=2, label="Energía 2T"),
+                   plt.Line2D([], [], color=C["momentum"], lw=2, label=r"Momento $L^2$"),
                    plt.Line2D([], [], color=C["separatrix"], lw=2, ls=(0, (5, 4)), label='separatriz'),
-                   plt.Line2D([], [], color=C["polhode"], lw=2, label="polhode (numerical)")]
-        ax.legend(handles=handles, loc="lower left", fontsize=9, frameon=False, labelcolor=C["muted"],
-                  bbox_to_anchor=(0.0, 0.0))
+                   plt.Line2D([], [], color=C["polhode"], lw=2, label="Polhoda")]
+        ax.legend(handles=handles, loc="lower center", fontsize=7, ncol=2, frameon=False, labelcolor=C["muted"],
+                  bbox_to_anchor=(0.5, -0.04))
 
     def dibujar_cuerpo(self):
         estado, ax = self.estado, self.grafica_cuerpo
@@ -158,14 +163,16 @@ class Pagina_movimiento:
         axis = estado['eje']
         lam = estado['movimiento']['autovalor']
         real = abs(lam.imag) < 1e-14
-        self.etiquetas_informacion.set_text("Autovalor λ\nPeriodo exacto\nDeriva 2T · L²\nDeriva |q|")
+        self.etiquetas_informacion.set_text("")
         self.texto_informacion.set_text(
-            f"±{abs(lam):.4f}{'' if real else ' i'}\n"
-            f"{estado['movimiento']['periodo']:.3f}\n"
-            f"{estado['derivas'][0]:.1e}  ·  {estado['derivas'][1]:.1e}\n"
-            f"{estado['derivas'][2]:.1e}")
-        self.indicador_estabilidad.set_text(f"{'INESTABLE' if real else 'ESTABLE'}    "
-                            f"λ = ±{abs(lam):.3f}{'' if real else ' i'}")
+            f"λ = ±{abs(lam):.4f}{'' if real else ' i'} s⁻¹\n"
+            f"Periodo: {estado['movimiento']['periodo']:.3f} s\n"
+            f"Deriva 2T: {estado['derivas'][0]:.1e}\n"
+            f"Deriva L²: {estado['derivas'][1]:.1e}\n"
+            f"Deriva |q|: {estado['derivas'][2]:.1e}\n"
+            f"C = L² − 2TI₂: {estado['movimiento']['casimir']:.2e}\n"
+            f"Polhoda: { {1: 'alrededor de I₃', -1: 'alrededor de I₁', 0: 'separatriz'}[estado['movimiento']['lado_separatriz']] }")
+        self.indicador_estabilidad.set_text('INESTABLE' if real else 'ESTABLE')
         self.indicador_estabilidad.get_bbox_patch().set_facecolor(C["bad"] if real else C["ok"])
         self.titulo_volteos.set_color(C["e"][axis])
         self.contador_volteos.set_color(C["e"][axis])
@@ -185,9 +192,9 @@ class Pagina_movimiento:
         for i in range(3):
             self.lineas[i].set_data(t[d[:kd]], U[d[:kd], i])
         self.cursor_tiempo.set_xdata([tiempo_elegido, tiempo_elegido])
-        self.reloj.set_text(f"t = {tiempo_elegido:.1f}")
+        self.reloj.set_text(f"{tiempo_elegido:.1f} s")
         self.contador_volteos.set_text(f"{searchsorted(estado['instantes_volteo'], tiempo_elegido)}")
-        self.velocidad.set_text(f"speed ×{estado['velocidad']:g}" + ("" if estado['reproduciendo'] else "   paused"))
+        self.velocidad.set_text(f"×{estado['velocidad']:g}" + ("" if estado['reproduciendo'] else " · pausa"))
         self.progreso.set_data([0, tiempo_elegido], [0, 0])
         self.marcador_tiempo.set_data([tiempo_elegido], [0])
 

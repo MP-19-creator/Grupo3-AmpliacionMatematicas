@@ -9,14 +9,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import matplotlib.pyplot as plt
 from active.gui_reactive.gui import crear_interfaz
 import time
-from numpy import array, argmin, arange, errstate, interp, linspace, ceil, sqrt, log, abs, exp, prod, searchsorted, isfinite, eye
+from numpy import array, argmin, arange, errstate, interp, linspace, ceil, sqrt, log, abs, exp, prod, searchsorted, isfinite, eye, angle, unwrap
 from numpy.linalg import norm, solve, LinAlgError
 from active.numerical_engine.Cauchy_Problem import Cauchy_problem, Cauchy_problem_adaptive, Integration_stopped
 from active.numerical_engine.temporal_schemes import Euler, Crank_Nicolson, RK4
 from active.space_physics.eje_intermedio import Rigid_body_problem, Initial_condition, Is_physical, Rotation_matrix
 from active.space_physics.eje_intermedio import (Kinetic_energy_2T, Angular_momentum_L2, Energy_ellipsoid, Momentum_ellipsoid,
     Separatrix, Polhode_period, Linear_eigenvalues, Box_dimensions,
-    Jacobian_eigenvalues, Kinematic_eigenvalues)
+    Jacobian_eigenvalues, Kinematic_eigenvalues, Side_of_separatrix)
 from active.numerical_engine.Estabilidad import stability_region, stability_function
 from active.numerical_engine.Errores_Convergencia import curva_convergencia, tramo_recto, ordenes_locales
 
@@ -27,17 +27,22 @@ from active.numerical_engine.NewtonRaphson import Newton, Newton_failed
 def iniciar_programa(animar=True):
     """El principal conecta las tres partes. Ninguna se importa desde la GUI."""
     resultados_actuales = {}
+    parametros_actuales = None
+    estudios_error = {}
 
     def calcular_simulacion(parametros):
+        nonlocal parametros_actuales
+        if parametros != parametros_actuales:
+            resultado = calcular_trayectoria(dict(parametros, metodo=metodos[parametros['nombre_metodo']]))
+            resultados_actuales.clear()
+            resultados_actuales.update(parametros, metodo=metodos[parametros['nombre_metodo']])
+            resultados_actuales.update(resultado)
+            parametros_actuales = dict(parametros)
+            estudios_error.clear()
         # La GUI entrega números y el nombre del método, nunca un esquema.
-        parametros = dict(parametros, metodo=metodos[parametros['nombre_metodo']])
-        resultado = calcular_trayectoria(parametros)
-        resultados_actuales.clear()
-        resultados_actuales.update(parametros)
-        resultados_actuales.update(resultado)
         # Devolver datos; la función del esquema se queda en el principal.
         datos = {clave: valor for clave, valor in resultados_actuales.items() if clave != 'metodo'}
-        datos['orden'] = parametros['metodo'].order
+        datos['orden'] = resultados_actuales['metodo'].order
         return datos
 
     def preparar_pagina(numero_pagina, tf_estudio):
@@ -45,10 +50,18 @@ def iniciar_programa(animar=True):
             if 'comparacion_metodos' not in resultados_actuales:
                 resultados_actuales['comparacion_metodos'] = comparar_metodos(resultados_actuales)
             if numero_pagina == 1:
-                return dict(comparacion_metodos=resultados_actuales['comparacion_metodos'])
-            return dict(estabilidad=preparar_datos_estabilidad(resultados_actuales, resultados_actuales['comparacion_metodos']))
+                if 'apoyo_comparacion' not in resultados_actuales:
+                    resultados_actuales['apoyo_comparacion'] = preparar_apoyo_comparacion(
+                        resultados_actuales, resultados_actuales['comparacion_metodos'])
+                return dict(comparacion_metodos=resultados_actuales['comparacion_metodos'],
+                            apoyo_comparacion=resultados_actuales['apoyo_comparacion'])
+            if 'estabilidad' not in resultados_actuales:
+                resultados_actuales['estabilidad'] = preparar_datos_estabilidad(resultados_actuales, resultados_actuales['comparacion_metodos'])
+            return dict(estabilidad=resultados_actuales['estabilidad'])
         if numero_pagina == 3:
-            return dict(estudio_error=calcular_estudio_error(resultados_actuales, tf_estudio))
+            if tf_estudio not in estudios_error:
+                estudios_error[tf_estudio] = calcular_estudio_error(resultados_actuales, tf_estudio)
+            return dict(estudio_error=estudios_error[tf_estudio])
         return {}
 
     interfaz = crear_interfaz(list(metodos), calcular_simulacion, preparar_pagina, animar=animar)
@@ -157,6 +170,7 @@ def calcular_trayectoria(parametros):
     tn, Un, aviso = integrar_trayectoria(
         F, parametros["tf"], U0, parametros['metodo'], parametros["dt"],
         parametros['adaptativo'], parametros["tol"])
+    fin_integracion = time.perf_counter()
     if len(tn) < 2:
         raise ValueError("La solución diverge al empezar. Aumenta la precisión del paso.")
     if parametros['adaptativo']:
@@ -170,15 +184,19 @@ def calcular_trayectoria(parametros):
     if indices_dibujo[-1] != len(t) - 1:
         indices_dibujo = array([*indices_dibujo, len(t) - 1])
     # Preparar las puntas de los ejes para dibujar la estela durante la animación.
-    puntas_eje = array([0.78 * Rotation_matrix(q)[:, parametros['eje']] for q in U[:, 3:7]])
     avisos = ([f"{parametros['nombre_metodo']}: {aviso}"] if aviso else [])
     if not Is_physical(I):
         avisos.append("I1 + I2 < I3: inercias no fisicas")
     movimiento = preparar_datos_movimiento(I, U, parametros['eje'])
-    return dict(solucion_completa=(tn, Un), t=t, U=U, tiempo_calculo=time.perf_counter()-inicio_calculo, avisos=avisos, movimiento=movimiento,
+    puntas_eje = .78 * movimiento['rotaciones'][:, :, parametros['eje']]
+    volteos = instantes_cambio_signo(tn, Un[:, parametros['eje']])
+    derivas = [v.max() for v in calcular_derivas(Un, I)]
+    return dict(solucion_completa=(tn, Un), t=t, U=U, tiempo_calculo=time.perf_counter()-inicio_calculo,
+                tiempo_integracion=fin_integracion-inicio_calculo, tiempo_preparacion=time.perf_counter()-fin_integracion,
+                avisos=avisos, movimiento=movimiento,
                 aviso=aviso, indice_actual=0, tiempo_actual=0.0, indices_dibujo=indices_dibujo, puntas_estela=puntas_eje,
-                instantes_volteo=instantes_cambio_signo(tn, Un[:, parametros['eje']]), ventana_estela=min(15., .2*t[-1]),
-                dt_utilizado=tn[1]-tn[0], derivas=[v.max() for v in calcular_derivas(Un, I)])
+                instantes_volteo=volteos, ventana_estela=min(15., .2*t[-1]),
+                dt_utilizado=tn[1]-tn[0], derivas=derivas)
 
 
 def preparar_datos_movimiento(I, U, eje):
@@ -193,6 +211,7 @@ def preparar_datos_movimiento(I, U, eje):
                 separatriz=Separatrix(I, T2), dimensiones=Box_dimensions(I),
                 rotaciones=rotaciones, vector_momento=.82*momento_angular/norm(momento_angular),
                 autovalor=Linear_eigenvalues(I, eje, U[0, eje])[0],
+                lado_separatriz=Side_of_separatrix(I, T2, L2), casimir=L2-I[1]*T2,
                 periodo=Polhode_period(I, T2, L2))
 
 
@@ -209,6 +228,51 @@ def comparar_metodos(parametros):
                                    parametros['adaptativo'], parametros["tol"])
         comparacion_metodos[nombre_metodo] = dict(t=t, U=U, aviso=aviso, derivas=calcular_derivas(U, parametros["I"]))
     return comparacion_metodos
+
+
+def preparar_apoyo_comparacion(datos, comparacion):
+    """Medidas y muestras para la defensa; no modifica las soluciones comparadas."""
+    I, eje = datos['I'], datos['eje']
+    transversales = [j for j in range(3) if j != eje]
+    # Referencia auxiliar con el RK4 y los límites de pasos existentes.
+    # Si se trunca, la GUI no extrapola sus muestras al resto del intervalo.
+    tr, Ur, aviso = integrar_trayectoria(Rigid_body_problem(I), datos['tf'],
+        Initial_condition(eje, datos['Omega'], datos['eps']), metodos['RK4'], datos['dt']/4)
+    series = dict(comparacion)
+    series['Referencia RK4'] = dict(t=tr, U=Ur, aviso=aviso)
+    curvas = {}
+    for nombre, resultado in series.items():
+        t, U = resultado['t'], resultado['U']
+        energia = Kinetic_energy_2T(U, I)
+        momento = Angular_momentum_L2(U, I)
+        derivas_signo = (energia/energia[0]-1, momento/momento[0]-1,
+                         norm(U[:, 3:7], axis=1)-1)
+        j, k = transversales
+        x = U[:, j]
+        cruces = ((x[:-1] < 0) & (x[1:] >= 0)).nonzero()[0]
+        tc = t[cruces] - x[cruces]*(t[cruces+1]-t[cruces])/(x[cruces+1]-x[cruces])
+        periodo = float((tc[-1]-tc[0])/(len(tc)-1)) if len(tc) >= 2 else float('nan')
+        indices = linspace(0, len(t)-1, min(len(t), max_puntos_curva), dtype=int)
+        curvas[nombre] = dict(t=t[indices], transversal=U[indices][:, transversales],
+            amplitud=norm(U[indices][:, transversales], axis=1),
+            derivas_signo=tuple(d[indices] for d in derivas_signo),
+            periodo=periodo, aviso=resultado['aviso'],
+            # Marcadores sincronizados con el reloj de la trayectoria principal.
+            marcadores=array([interp(datos['t'], t, U[:, c]) for c in transversales]).T,
+            fin=t[-1])
+    lam = datos['movimiento']['autovalor']
+    t = datos['t']
+    inicial = norm(datos['solucion_completa'][1][0, transversales])
+    guia_t, guia = array([]), array([])
+    if lam.real > 0 and inicial > 0:
+        # Guía proporcional, no solución exacta. Mostrar solo cerca del giro puro.
+        limite = log(.1*datos['Omega']/inicial)/lam.real
+        guia_t = t[t <= max(0., limite)]
+        guia = inicial*exp(lam.real*guia_t)
+    return dict(curvas=curvas, transversales=transversales,
+        periodo_teorico=datos['movimiento']['periodo'], guia_crecimiento=(guia_t, guia),
+        referencia='RK4 · Δt/4 · aproximada', referencia_aviso=aviso,
+        referencia_completa=(tr, Ur))
 
 
 def calcular_estudio_error(parametros, tf):
@@ -247,13 +311,13 @@ def preparar_datos_estabilidad(datos, comparacion_metodos):
         autovalores_por_instante.append(Jacobian_eigenvalues(datos["I"], U) * h)
     nombres_cortos = {"Euler": "Euler", "Crank-Nicolson": "CN", "RK4": "RK4"}
     tipo_autovalor = "real: inestable" if abs(z_w[0].imag) < 1e-14 else "imaginario: centro"
-    filas_tabla = ["1) ω mode at the equilibrium, ONE step", f"   z = {z_w[0]:.4g}   ({tipo_autovalor})",
-            f"  {'':<6}{'|R(z)|':>13}{'exacto |e^z|':>13}"]
+    filas_tabla = [f"Equilibrio · z = {z_w[0]:.3g}",
+            f"  {'':<6}{'|R(z)|':>11}{'|exp(z)|':>11}"]
     for etiqueta, nombre_metodo in nombres_estabilidad.items():
         marca = "▶ " if etiqueta == datos['nombre_metodo'] else "  "
-        filas_tabla.append(f"{marca}{nombres_cortos[etiqueta]:<6}{abs(stability_function(nombre_metodo, z_w[0])):13.8f}{abs(exp(z_w[0])):13.8f}")
-    filas_tabla += ["", "2) Cuaternion: |q(t_f)| - 1   (exacto: 0)", "   z = ±i|ω|Δt/2 en cada paso",
-             f"  {'':<6}{'prod |R(z_n)|':>13}{'simulado':>13}"]
+        filas_tabla.append(f"{marca}{nombres_cortos[etiqueta]:<6}{abs(stability_function(nombre_metodo, z_w[0])):11.6f}{abs(exp(z_w[0])):11.6f}")
+    filas_tabla += ["", "Cuaternión · |q(tf)| − 1",
+             f"  {'':<6}{'Predicción':>11}{'Simulación':>11}"]
     for etiqueta, nombre_metodo in nombres_estabilidad.items():
         t, U = comparacion_metodos[etiqueta]["t"], comparacion_metodos[etiqueta]["U"]
         if len(t) < 2:
@@ -261,11 +325,22 @@ def preparar_datos_estabilidad(datos, comparacion_metodos):
         w = norm(U[:-1, :3], axis=1)
         factores = abs(stability_function(nombre_metodo, .5j*w*(t[1:]-t[:-1])))
         marca = "▶ " if etiqueta == datos['nombre_metodo'] else "  "
-        filas_tabla.append(f"{marca}{nombres_cortos[etiqueta]:<6}{prod(factores)-1:13.3e}{norm(U[-1, 3:7])-1:13.3e}")
+        filas_tabla.append(f"{marca}{nombres_cortos[etiqueta]:<6}{prod(factores)-1:11.3e}{norm(U[-1, 3:7])-1:11.3e}")
+    # Modo oscilatorio test: ilustra disipación y dispersión sin integrar de nuevo
+    # el satélite, ni incorporar un integrador distinto a su simulación.
+    n = arange(25)
+    ys = linspace(0, 2.8, 240)
+    demostracion = {}
+    for etiqueta, nombre in {**nombres_estabilidad, 'Euler implícito': 'Euler_implicit'}.items():
+        r = stability_function(nombre, .3j)
+        demostracion[etiqueta] = dict(orbita=r**n,
+            ganancia=abs(stability_function(nombre, 1j*ys)),
+            fase=unwrap(angle(stability_function(nombre, 1j*ys)))-ys)
     return dict(autovalores_iniciales=(z_w, z_q), radio=radio, regiones_completas=regiones_completas,
                 regiones_ampliadas=regiones_ampliadas, color_ampliacion=(X, Y, color_ampliacion),
                 eje_imaginario=y, curvas_eje_imaginario=curvas_eje_imaginario,
-                autovalores_por_instante=array(autovalores_por_instante), tabla="\n".join(filas_tabla))
+                autovalores_por_instante=array(autovalores_por_instante), tabla="\n".join(filas_tabla),
+                demostracion=dict(n=n, y=.3, barrido=ys, curvas=demostracion, exacta=exp(.3j*n)))
 
 
 
@@ -282,7 +357,7 @@ def calcular_convergencia(parametros, tf):
     return resultado
 
 def estimar_error_richardson(parametros, tf):
-    """ Error de Richardson (con N y 2N) frente al error verdadero (RK4 con 8N pasos) en [0, t_f del estudio] """
+    """Error de Richardson frente a una referencia aproximada RK4 de 8N pasos."""
     datos = parametros
     metodo, q = datos['metodo'], datos['metodo'].order
     N = int(min(max(round(tf / datos["dt"]), 20), 2000))

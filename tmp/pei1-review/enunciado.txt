@@ -1,0 +1,251 @@
+=== PAGINA 1 ===
+UNIVERSIDAD POLIT ´ECNICA DE MADRID
+Escuela T´ ecnica Superior de Ingenier ´ ıa Aeron´ autica y del Espacio (ETSIAE)
+M´ aster Universitario en Sistemas Espaciales (MUSE) — Curso 2026–2027
+Ampliaci´ on de Matem´ aticas 1
+Enunciado Oficial: Prueba de Evaluaci´ on Intermedia I (PEI 1)
+Din´ amica de Actitud Satelital: Teorema del Eje Intermedio,
+An´ alisis Espectral y Entorno Reactivo en Python
+Coordinador: Dr. Juan Antonio Hern´ andez Ramos Convocatoria: Evaluaci´ on Progresiva
+Actividad: Prueba de Evaluaci´ on Inter-
+media I (PEI 1)
+Ponderaci´ on: 50 % Calificaci´ on Progresiva
+Modalidad: Proyecto en Grupo + Defen-
+sa Oral Individual
+Nota M ´ ınima:3.0 / 10.0 (para promediar)
+T ribunal Evaluador: M ´ ınimo 2 profesores (acto
+p´ ublico colegiado)
+Duraci´ on: 20 min exposici´ on + 15 min
+defensa
+Marco F ´ ısico:Din´ amica del s´ olido r ´ ıgido y
+estabilidad de actitud
+Entorno Software: Arquitectura en Python con
+GUI reactiva
+1. Contexto Acad´ emico y Relevancia en la Ingenier ´ ıa Aeroespacial
+Uno de los fen´ omenos m´ as contraintuitivos y trascendentales en la mec´ anica de sistemas espaciales
+es el conocido como T eorema del Eje Intermedio (tambi´ en documentado hist´ oricamente como el
+teorema de la raqueta de tenis o efecto Dzhanibekov, redescubierto visualmente por el cosmonauta
+sovi´ etico Vladimir Dzhanibekov en 1985 a bordo de la estaci´ on orbital Salyut 7). El fen´ omeno establece
+que la rotaci´ on libre de un cuerpo r ´ ıgido asim´ etrico en torno a sus ejes principales de inercia con
+momentos m´ aximo y m ´ ınimo es din´ amicamente estable frente a perturbaciones infinitesimales, mientras
+que la rotaci´ on alrededor del eje de inercia intermedio es estrictamente inestable, dando lugar a una
+inversi´ on peri´ odica dram´ atica de 180 grados en la orientaci´ on relativa del veh ´ ıculo.
+En la historia de la ingenier ´ ıa espacial, la incomprensi´ on o modelado defectuoso de la estabilidad
+rotacional ha provocado fallos notorios de misi´ on. El caso paradigm´ atico del sat´ elite estadounidense
+Explorer 1 (1958) evidenci´ o c´ omo la presencia de elementos deformables o disipativos altera las cuencas
+de estabilidad, pasando de una rotaci´ on nominal sobre el eje de menor inercia a una transici´ on no
+deseada hacia el eje de m´ axima inercia (major axis rule). Asimismo, en misiones de retirada activa de
+basura espacial ( Active Debris Removal, ADR) y acoplamiento aut´ onomo (rendezvous & docking), la
+caracterizaci´ on del movimiento de precesi´ on libre y volteo asim´ etrico de etapas de cohetes abandonadas
+y asteroides triaxiales resulta imprescindible para garantizar trayectorias de captura no destructivas.
+El prop´ osito de la presente Prueba de Evaluaci´ on Intermedia I es formular, analizar cualitativamente
+y simular computacionalmente la din´ amica rotacional no lineal del s´ olido libre y la inestabilidad del eje
+intermedio mediante un entorno de software cient ´ ıfico estructurado en Python dotado de una interfaz
+gr´ afica de usuario interactiva (GUI).
+1
+
+=== PAGINA 2 ===
+2. Formulaci´ on Rigurosa del Problema Din´ amico
+2.1. Cinem´ atica y Ecuaciones de Euler en Ejes Principales
+Consid´ erese un veh ´ ıculo espacial no deformable que evoluciona en el r´ egimen de giro libre en el
+vac ´ ıo orbital, libre de pares de fuerzas externas (Next = 0). Fijando un sistema coordenado solidario al
+cuerpo centrado en su centro de masas y alineado estrictamente con sus tres ejes principales de inercia,
+el tensor de inercia adopta forma diagonal:
+I = diag(I1, I2, I3), con: 0 < I1 < I2 < I3 (1)
+donde I1 corresponde al momento de inercia m ´ ınimo,I2 al eje intermedio y I3 al momento de inercia
+m´ aximo. Denotando el vector de velocidad angular instant´ anea expresado en ejes del cuerpo como
+ω = [ω1, ω2, ω3]T ∈ R3, la conservaci´ on del momento angular totaldLdt inercial = 0 expresada en el marco
+m´ ovil da origen a las cl´ asicasecuaciones din´ amicas de Euler:
+
+
+
+I1 ˙ω1 − (I2 − I3) ω2ω3 = 0
+I2 ˙ω2 − (I3 − I1) ω3ω1 = 0
+I3 ˙ω1 − (I1 − I2) ω1ω2 = 0
+⇐ ⇒
+
+
+
+˙ω1 = I2 − I3I1 ω2ω3
+˙ω2 = I3 − I1I2 ω3ω1
+˙ω3 = I1 − I2I3 ω1ω2
+(2)
+2.2. Integrales Primeras Invariantes y Geometr ´ ıa de Poinsot
+El sistema de orden tres no lineal (2) es conservativo y admite dos integrales primeras anal ´ ıticas
+independientes y globales:
+1. Energ ´ ıa Cin´ etica Rotacional (2T ): Dado que el trabajo de las fuerzas externas es nulo, la energ ´ ıa
+rotacional es estrictamente invariante en el tiempo:
+2T = ω · (Iω) = I1ω21 + I2ω22 + I3ω23 = 2T0 = cte (3)
+Geom´ etricamente, para un valor prefijado deT , esta ecuaci´ on define en el espacio de fases (ω1, ω2, ω3)
+un elipsoide de energ ´ ıaconc´ entrico de semiejes
+p
+2T /I1 >
+p
+2T /I2 >
+p
+2T /I3.
+2. M´ odulo del Momento Angular (∥L∥2): Al no existir torques exteriores, la norma eucl ´ ıdea del
+vector momento angular inercial L = Iω se conserva:
+L2 = ∥L∥2 = I 21 ω21 + I 22 ω22 + I 23 ω23 = L20 = cte (4)
+Esta ligadura define un elipsoide de momento angular cuyos semiejes escalan como L/I1 >
+L/I2 > L/I3.
+Las trayectorias admisibles del sistema f ´ ısico en el espacio de fases tridimensional de velocidades
+angulares quedan un ´ ıvocamente determinadas por lacurva de intersecci´ onentre ambas superficies
+cuadr´ aticas invariantes (polhodas de la construcci´ on geom´ etrica de Poinsot):
+C(T, L) =
+
+ω ∈ R3 : I1ω21 + I2ω22 + I3ω23 = 2T 	 ∩ ω ∈ R3 : I 21 ω21 + I 22 ω22 + I 23 ω23 = L2	 (5)
+Para cualquier movimiento mec´ anicamente realizable, la compatibilidad algebraica de las dos cu´ adricas
+impone la cota universal 2 I1T ≤ L2 ≤ 2I3T .
+2
+
+=== PAGINA 3 ===
+2.3. Linealizaci´ on Espectral y Demostraci´ on del Teorema
+El campo vectorial continuo ˙ω = f (ω) presenta tres familias fundamentales de puntos de equilibrio
+en el espacio de fases, correspondientes a rotaciones puras sobre cada uno de los ejes principales de
+inercia con velocidad angular nominal Ω ̸= 0:
+ω∗(1) = [Ω, 0, 0]T , ω∗(2) = [0, Ω, 0]T , ω∗(3) = [0, 0, Ω]T (6)
+La matriz Jacobiana del campo general J(ω) = ∇f (ω) se expresa anal ´ ıticamente como:
+J(ω) =
+
+ 0 I2 − I3I1 ω3 I2 − I3I1 ω2I3 − I1I2 ω3 0 I3 − I1I2 ω1I1 − I2
+I3
+ω2
+I1 − I2
+I3
+ω1 0
+
+ (7)
+Al evaluar la estabilidad espectral introduciendo perturbaciones de primer orden ω(t) = ω∗(k) + δω(t):
+1. Rotaci´ on en torno al eje de inercia m ´ ınimo (I1): Evaluando en ω∗(1) = [Ω, 0, 0]T , el sistema
+perturbado de las componentes desacopladas ( δω2, δω3) satisface:
+ ˙δω 2
+˙δω 3
+
+=
+"
+0 I3−I1I2 ΩI1−I2
+I3 Ω 0
+# δω2
+δω3
+
+=⇒ det(λI − J1) = λ2 − (I3 − I1)(I1 − I2)I2I3 Ω2 = 0 (8)
+Dado que I1 < I2 < I3, se tiene ( I3 − I1) > 0 y ( I1 − I2) < 0. En consecuencia, el producto es
+estrictamente negativo:
+λ1,2 = ±iΩ
+s
+(I3 − I1)(I2 − I1)
+I2I3
+∈ iR (9)
+Los autovalores son puramente imaginarios conjugados. El punto cr ´ ıtico es un centro el ´ ıptico
+estable en el sentido de Lyapunov (no asint´ oticamente estable).
+2. Rotaci´ on en torno al eje de inercia m´ aximo (I3): Evaluando en ω∗(3) = [0, 0, Ω]T , la ecuaci´ on
+caracter ´ ıstica para las perturbaciones transversales (δω1, δω2) entrega:
+λ1,2 = ±iΩ
+s
+(I3 − I2)(I3 − I1)
+I1I2
+∈ iR (10)
+Puesto que ( I3 − I2) > 0 y ( I3 − I1) > 0, las ra ´ ıces vuelven a ser imaginarias puras, garantizando
+nuevamente la estabilidad orbital en el sentido de Lyapunov .
+3. Rotaci´ on en torno al eje de inercia intermedio ( I2): Evaluando en el equilibrio ω∗(2) =
+[0, Ω, 0]T , el sistema acoplado para ( δω1, δω3) adopta la forma:
+ ˙δω 1
+˙δω 3
+
+=
+"
+0 I2−I3I1 ΩI1−I2
+I3 Ω 0
+# δω1
+δω3
+
+=⇒ λ2 − (I2 − I3)(I1 − I2)I1I3 Ω2 = 0 (11)
+Bajo el ordenamiento I1 < I2 < I3, se constata que ( I2 − I3) < 0 y ( I1 − I2) < 0, de modo que su
+producto es estrictamente positivo:
+λ1,2 = ±Ω
+s
+(I3 − I2)(I2 − I1)
+I1I3
+∈ R (12)
+Al existir un autovalor real estrictamente positivo ( λ1 > 0), por el Primer M´ etodo de Lyapunov y
+el Teorema de Hartman-Grobman, el equilibrio es un punto de silla hiperb´ olico estrictamente
+inestable.
+3
+
+=== PAGINA 4 ===
+3. Marco de Implementaci´ on Computacional y GUI Interactiva
+La resoluci´ on del problema exige el dise˜ no de una plataforma de simulaci´ on en Python fundamentada
+en principios rigurosos de ingenier ´ ıa del software, articulada en tres subsistemas desacoplados:
+- Capa F ´ ısica (space physics): Encapsula la definici´ on anal ´ ıtica de las ecuaciones del problema, el
+c´ omputo de la matriz Jacobiana exacta, la verificaci´ on de los invariantes 2T y L2.
+- Capa Matem´ atica y Algor ´ ıtmica (numerical engine): Integra esquemas temporales de paso
+simple y adaptativo (Euler, Crank-Nicolson, RK4), algoritmos de estimaci´ on de error asint´ otico por
+extrapolaci´ on de Richardson y c´ alculo de regiones de estabilidad num´ erica|R(z)| ≤1 para evaluar la
+conservaci´ on f ´ ısica de las integrales primeras.
+- Capa de Visualizaci´ on Din´ amica (gui reactive): Cuadro de mando interactivo multipanel en
+Python (e.g. matplotlib.widgets) que permita en tiempo real:
+1. Manipular interactivamente mediante deslizadores ( sliders) los momentos de inercia ( I1, I2, I3),
+la velocidad angular inicial Ω y el paso temporal ∆ t.
+2. Conmutar din´ amicamente entre integradores num´ ericos y contrastar la deriva num´ erica de
+energ ´ ıa ∆T (t) y momento ∆ L(t).
+3. Representar simult´ aneamente el espacio de fases 3D (ω1, ω2, ω3) con las superficies de Poinsot,
+la separatriz cr ´ ıtica y la animaci´ on en vivo de la orientaci´ on espacial 3D del sat´ elite durante la
+transici´ on inestable.
+4. Protocolo de la Sesi´ on de Examen y Criterios Reglamentarios
+De conformidad con la Gu ´ ıa de Aprendizaje oficial de la asignatura, la Prueba de Evaluaci´ on
+Intermedia I se desarrollar´ a durante laSemana 7 bajo las siguientes condiciones de r´ egimen docente:
+1. Acto P´ ublico Colegiado:La sesi´ on de evaluaci´ on se celebrar´ a de forma presencial y en acto
+p´ ublico para todo el estudiantado del m´ aster, ante un tribunal docente integrado por al menos dos
+profesores del departamento evaluador.
+2. Tiempo y Estructura de la Defensa:
+- Exposici´ on Colegiada del Grupo (20 minutos):El equipo presentar´ a de forma conjunta
+los fundamentos anal ´ ıticos del teorema del eje intermedio, la derivaci´ on de invariantes, la ar-
+quitectura de clases del software y una demostraci´ on interactiva en directo operando la GUI
+desarrollada.
+- T urno de Interrogatorio Individual (15 minutos): Cada integrante del grupo ser´ a inter-
+pelado individualmente por los miembros del tribunal sobre la deducci´ on matem´ atica, el rigor
+de los esquemas num´ ericos de discretizaci´ on, la gesti´ on de singularidades o el c´ odigo fuente del
+proyecto.
+3. Car´ acter Individual de la Calificaci´ on:Aunque el dise˜ no software y el marco f ´ ısico sean fruto
+del trabajo en equipo, la nota final otorgada por el tribunal es estrictamente individual, evaluada
+mediante la r´ ubrica oficial.
+4. Condici´ on de Aprobado en Evaluaci´ on Progresiva:Para tener derecho a promediar en el siste-
+ma de evaluaci´ on continua/progresiva es preceptivo alcanzar unacalificaci´ on m ´ ınima individual
+de 3.0 sobre 10.0 en esta prueba.
+4
+
+=== PAGINA 5 ===
+5. R´ ubrica de Evaluaci´ on Ponderada
+La calificaci´ on global individual de la Prueba de Evaluaci´ on Intermedia I (sobre una puntuaci´ on
+m´ axima de 10.0 puntos) se otorgar´ a conforme a la matriz de ponderaci´ on que se detalla en la Tabla 1:
+Bloque Evaluado Criterios Espec ´ ıficos de Calidad y Evidencias Ponderaci´ on
+1. Rigor Din´ amico y
+F ormulaci´ on Anal ´ ıtica
+Conservaci´ on anal ´ ıtica de 2T y L2, linealizaci´ on espectral de los
+tres equilibrios, demostraci´ on de la inestabilidad hiperb´ olica del
+eje intermedio y geometr ´ ıa de Poinsot.
+25 %
+2. M´ etodos Num´ ericos
+y Conservaciones F ´ ısi-
+cas
+Implementaci´ on de integradores de un paso (Euler, Crank-
+Nicolson, RK4), an´ alisis de convergencia mediante extrapola-
+ci´ on de Richardson, monitorizaci´ on de la deriva de invariantes
+y estabilidad num´ erica absoluta.
+25 %
+3. Ingenier ´ ıa del Soft-
+ware y GUI Interacti-
+va
+Modularidad estricta y desacoplo en tres capas (F ´ ısica, Algo-
+ritmos, GUI), visualizaci´ on sincr´ onica del espacio de fases 3D y
+estabilidad de la ejecuci´ on en vivo.
+25 %
+4. Defensa Oral y Do-
+minio Individual
+Precisi´ on conceptual en la exposici´ on t´ ecnica, capacidad de ra-
+zonamiento cr ´ ıtico ante escenarios imprevistos planteados por
+el tribunal y dominio demostrable del c´ odigo del repositorio.
+25 %
+Cuadro 1: Matriz de ponderaci´ on y r´ ubrica oficial de la Prueba de Evaluaci´ on Intermedia I (PEI 1).
+5

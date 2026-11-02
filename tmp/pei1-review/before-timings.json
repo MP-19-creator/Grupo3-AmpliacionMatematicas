@@ -1,0 +1,129 @@
+{
+  "backend": "TkAgg",
+  "version": "3.11.2",
+  "pages": [
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 1,
+      "prepare": 0.0007036000024527311,
+      "update_median": 0.0009017999982461333,
+      "draw_median": 0.36094719998072833
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 2,
+      "prepare": 0.3839508999371901,
+      "update_median": 0.00015300000086426735,
+      "draw_median": 0.46840150002390146
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 3,
+      "prepare": 0.16127779998350888,
+      "update_median": 0.00014300004113465548,
+      "draw_median": 0.5205049000214785
+    },
+    {
+      "size": [
+        1600,
+        950
+      ],
+      "page": 4,
+      "prepare": 6.521114700008184,
+      "update_median": 7.589999586343765e-05,
+      "draw_median": 0.4175569999497384
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 1,
+      "prepare": 0.0012051999801769853,
+      "update_median": 0.0006897000130265951,
+      "draw_median": 0.254569600103423
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 2,
+      "prepare": 0.00017450004816055298,
+      "update_median": 0.000147900078445673,
+      "draw_median": 0.5376148999202996
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 3,
+      "prepare": 0.00024259998463094234,
+      "update_median": 0.00017120002303272486,
+      "draw_median": 0.4770999000174925
+    },
+    {
+      "size": [
+        1200,
+        800
+      ],
+      "page": 4,
+      "prepare": 0.00017150002531707287,
+      "update_median": 9.520002640783787e-05,
+      "draw_median": 0.5376315999310464
+    }
+  ],
+  "repeat_calculate": {
+    "seconds": 8.135951500036754,
+    "calls": {
+      "integrar_trayectoria": 1,
+      "preparar_datos_movimiento": 1,
+      "comparar_metodos": 0,
+      "preparar_datos_estabilidad": 0,
+      "calcular_estudio_error": 1
+    }
+  },
+  "revisit_calls": {
+    "integrar_trayectoria": 2,
+    "preparar_datos_movimiento": 0,
+    "comparar_metodos": 1,
+    "preparar_datos_estabilidad": 1,
+    "calcular_estudio_error": 0
+  },
+  "timings": {
+    "integrar_trayectoria": [
+      0.1928760000737384,
+      0.058141699992120266,
+      0.3164689000695944,
+      0.20451040007174015,
+      0.060730099910870194,
+      0.3164745999965817
+    ],
+    "preparar_datos_movimiento": [
+      0.026981999981217086,
+      0.030394200002774596
+    ],
+    "comparar_metodos": [
+      0.37525319994892925,
+      0.37788929999805987
+    ],
+    "preparar_datos_estabilidad": [
+      0.10202009999193251,
+      0.09241249994374812
+    ],
+    "calcular_estudio_error": [
+      6.513827799935825,
+      7.2500969000393525
+    ]
+  }
+}

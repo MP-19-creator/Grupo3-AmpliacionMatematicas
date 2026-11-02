@@ -21,10 +21,10 @@ class Pagina_precision:
     def __init__(self, figura, estado):
         self.figura, self.estado = figura, estado
         self.grafica_convergencia = preparar_grafica(figura.add_axes([0.055, 0.345, 0.395, 0.505]),
-                             "CONVERGENCE  ·  log D  vs  log N     (slope = −order)",
-                             r"$\log_{10} N$", r"$\log_{10} D$,    $D = |U_N(t_f) - U_{2N}(t_f)|$")
+                             "Convergencia · pendiente = −orden",
+                             r"$\log_{10} N$", r"$\log_{10} D$")
         self.grafica_error = preparar_grafica(figura.add_axes([0.530, 0.610, 0.455, 0.240]),
-                             "RICHARDSON ESTIMATE  vs  TRUE ERROR  (selected scheme, current Δt)", "t", "|error|")
+                             "Error · Richardson / referencia RK4", "t (s)", "|error|")
         self.grafica_error.set_yscale("log")
         self.titulo_tabla = figura.text(0.515, 0.512, "", fontsize=10, color=C["accent"], fontweight="bold")
         self.tabla = figura.text(0.515, 0.487, "", fontsize=9.5, color=C["text"], va="top", family="monospace",
@@ -32,7 +32,7 @@ class Pagina_precision:
         self.explicacion = figura.text(0.815, 0.480, "", fontsize=9.2, color=C["muted"], va="top", linespacing=1.55)
         self.texto_resumen_estudio = figura.text(0.055, 0.893, "", fontsize=10, color=C["warn"])
         self.grafica_control_estudio = figura.add_axes([0.120, 0.262, 0.200, 0.018])
-        self.control_tf_estudio = Slider(self.grafica_control_estudio, r"study $t_f$", 5., 40., valinit=20., valfmt="%.0f",
+        self.control_tf_estudio = Slider(self.grafica_control_estudio, r"Estudio (s)", 5., 40., valinit=20., valfmt="%.0f",
                                color=C["accent"], track_color=C["line"], initcolor="none",
                                handle_style={"facecolor": C["text"], "edgecolor": C["accent"], "size": 10})
         self.grafica_control_estudio.set_facecolor(C["panel"])
@@ -91,7 +91,7 @@ class Pagina_precision:
             filas_tabla.append(f"{n:7d} {tf_estudio/n:9.4f} {r['D'][indice]:14.3e} {orden}")
         self.titulo_tabla.set_text(f"{estado['nombre_metodo'].upper()}  /  ORDEN TEÓRICO {estado['orden']}")
         self.tabla.set_text("\n".join(filas_tabla))
-        self.explicacion.set_text("CÓMO LEERLO\n\nDuplicar N reduce Δt\na la mitad.\n\nLa pendiente mide\nel orden observado.\n\nD compara las mallas\nN y 2N, sin solución\nexacta conocida.")
+        self.explicacion.set_text("")
         self.texto_resumen_estudio.set_text(f"Estudio completo · t = {tf_estudio:.0f} · cálculo {tiempo_calculo:.2f} s")
         self.texto_resumen_estudio.set_color(C["muted"])
 
