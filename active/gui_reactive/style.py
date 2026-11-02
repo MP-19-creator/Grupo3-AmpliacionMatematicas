@@ -2,7 +2,6 @@
 Estilo de presentacion comun a todas las paginas de la GUI: tema claro, paleta y pequenas ayudas de dibujo.
 Los colores de los ejes del cuerpo (e1 cobre, e2 verde petróleo, e3 violeta) y de los esquemas son los mismos en todas las paginas.
 """
-import sys
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
@@ -13,20 +12,23 @@ C = dict(bg="#F4F1E9", panel="#FFFDF7", line="#DCD6CB", text="#292538", muted="#
          ok="#398575", bad="#BD4F52", warn="#A96120", soft="#EBE4F8", ink="#302744")
 
 # Colores consistentes y legibles sobre papel en las cuatro vistas.
-scheme_colors = {"Euler": "#C85B37", "Crank-Nicolson": "#218579", "RK4": "#6544BC"}
+colores_metodos = {"Euler": "#C85B37", "Crank-Nicolson": "#218579", "RK4": "#6544BC"}
 
 
 
-def _font(candidates):
-    available = {f.name for f in font_manager.fontManager.ttflist}
-    return next((c for c in candidates if c in available), "DejaVu Sans")
+def elegir_fuente(candidatas):
+    disponibles = {f.name for f in font_manager.fontManager.ttflist}
+    for candidata in candidatas:
+        if candidata in disponibles:
+            return candidata
+    return "DejaVu Sans"
 
 
-def Presentation_style():
+def aplicar_estilo():
     """ Tema claro y teclas libres para los atajos (se quitan los atajos de matplotlib que chocan) """
     plt.rcParams.update({
         "toolbar": "None",
-        "font.family": _font(["Segoe UI", "Inter", "Helvetica Neue", "Arial", "DejaVu Sans"]),
+        "font.family": elegir_fuente(["Segoe UI", "Inter", "Helvetica Neue", "Arial", "DejaVu Sans"]),
         "mathtext.fontset": "stixsans",
         "figure.facecolor": C["bg"], "axes.facecolor": C["panel"], "savefig.facecolor": C["bg"],
         "axes.edgecolor": C["line"], "axes.labelcolor": C["muted"], "text.color": C["text"],
@@ -37,15 +39,15 @@ def Presentation_style():
         "keymap.yscale": [], "keymap.quit": ["ctrl+w", "cmd+w"], "keymap.save": ["ctrl+s"] })
 
 
-def Panel(ax, title=None, xlabel=None, ylabel=None):
+def preparar_grafica(ax, titulo=None, xlabel=None, ylabel=None):
     """ Ejes 2D con el aspecto de la presentacion """
     ax.set_facecolor(C["panel"])
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
+    for borde in ("top", "right"):
+        ax.spines[borde].set_visible(False)
     ax.tick_params(labelsize=9)
     ax.grid(True, which="major")
-    if title:
-        ax.set_title(title, loc="left", fontsize=10.5, fontweight="bold", color=C["muted"], pad=8)
+    if titulo:
+        ax.set_title(titulo, loc="left", fontsize=10.5, fontweight="bold", color=C["muted"], pad=8)
     if xlabel:
         ax.set_xlabel(xlabel, fontsize=10)
     if ylabel:
@@ -53,11 +55,6 @@ def Panel(ax, title=None, xlabel=None, ylabel=None):
     return ax
 
 
-def Legend(ax, ncol=1, loc="lower right", fontsize=9):
+def poner_leyenda(ax, ncol=1, loc="lower right", fontsize=9):
     return ax.legend(loc=loc, fontsize=fontsize, ncol=ncol, facecolor=C["panel"], edgecolor=C["line"],
                      labelcolor=C["text"], framealpha=0.92)
-
-
-def Debugger_attached():
-    """ True si se ejecuta bajo un depurador (VS Code con F5 carga debugpy/pydevd): la animacion va mas lenta """
-    return sys.gettrace() is not None or any(m in sys.modules for m in ("pydevd", "debugpy"))
