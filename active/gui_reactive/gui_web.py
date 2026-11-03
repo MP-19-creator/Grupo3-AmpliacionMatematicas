@@ -13,6 +13,7 @@ Peticiones del navegador:
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -34,7 +35,8 @@ controles = dict(
     I3=dict(etiqueta="I₃", minimo=.2, maximo=5., inicial=3., paso=.01, unidad="kg·m²"),
     Omega=dict(etiqueta="Ω", minimo=.1, maximo=3., inicial=1., paso=.01, unidad="rad/s"),
     eps=dict(etiqueta="ε", minimo=0., maximo=1., inicial=.001, unidad=""),
-    dt=dict(etiqueta="Δt", minimo=1e-6, maximo=2., inicial=.02, unidad="s"),
+    # Δt mínimo 10⁻³ s (la v1 admite 10⁻⁶): más fino, el cálculo tarda demasiado para una demostración.
+    dt=dict(etiqueta="Δt", minimo=1e-3, maximo=2., inicial=.02, unidad="s"),
     tf=dict(etiqueta="t_f", minimo=1., maximo=150., inicial=80., paso=1., unidad="s"),
     tol=dict(etiqueta="Tolerance", minimo=1e-12, maximo=.01, inicial=1e-6, unidad=""),
     tf_estudio=dict(etiqueta="Study interval", minimo=5., maximo=40., inicial=20., paso=1., unidad="s"),
@@ -55,6 +57,19 @@ escenarios = [
          valores=dict(I1=1., I2=2., I3=3., Omega=1., eps=1e-7, dt=.02, tf=150., metodo="RK4", adaptativo=False, eje=1)),
 ]
 duracion_reproduccion = 20
+# Avisos del principal y del motor (en español en la v1) traducidos al idioma de la GUI web.
+traducciones = [
+    (r"Se requiere I₁ < I₂ < I₃ · se conserva el último resultado válido", "Requires I₁ < I₂ < I₃ · last valid result kept"),
+    (r"La solución diverge al empezar\. Aumenta la precisión del paso\.", "The solution diverges from the first steps. Reduce Δt."),
+    (r"Límite de ([\d,]+) pasos: t = (\S+) s \(Δt = (\S+)\)", r"\1-step limit: integrated up to t = \2 s (Δt = \3)"),
+    (r"Limite de pasos en t = (\S+)", r"Step limit reached at t = \1 s"),
+    (r"Integracion detenida en t = (\S+)", r"Integration stopped at t = \1 s"),
+    (r"Divergencia cerca de t = (\S+) s", r"Diverges near t = \1 s"),
+    (r"I1 \+ I2 < I3: inercias no fisicas", "I₁ + I₂ < I₃: not a physical body"),
+    (r"Residuo no finito", "Newton: non-finite residual"),
+    (r"Jacobiana singular", "Newton: singular Jacobian"),
+    (r"Limite de iteraciones de Newton", "Newton: iteration limit reached"),
+]
 puerto_inicial = int(os.environ.get("ORBITA_PUERTO", 8765))
 
 
@@ -84,7 +99,7 @@ def crear_interfaz_web(nombres_metodos, al_calcular, al_preparar_pagina, puerto=
             try:
                 resultado = al_calcular(parametros)
             except (ArithmeticError, ValueError, RuntimeError) as exc:
-                return dict(error=f"Could not compute the trajectory: {exc}")
+                return dict(error=f"Could not compute the trajectory: {traducir(exc)}")
             estado.update(resultado=resultado, parametros_aplicados=dict(parametros))
         return preparar_envio(resultado)
 
@@ -93,7 +108,7 @@ def crear_interfaz_web(nombres_metodos, al_calcular, al_preparar_pagina, puerto=
             try:
                 datos = al_preparar_pagina(numero_pagina, tf_estudio)
             except (ArithmeticError, ValueError, RuntimeError) as exc:
-                return dict(error=f"Could not compute this view: {exc}")
+                return dict(error=f"Could not compute this view: {traducir(exc)}")
         return preparar_envio_pagina(datos)
 
     # 2. PETICIONES: cada ruta llama a una acción y devuelve JSON.
@@ -210,8 +225,10 @@ def preparar_envio(datos):
     tn, _ = datos.pop('solucion_completa')
     datos['pasos'] = len(tn) - 1
     for clave in ('puntas_estela', 'comparacion_metodos', 'apoyo_comparacion', 'estabilidad', 'estudio_error',
-                  'fantasmas'):
+                  'fantasmas', 'volteos_metodos'):
         datos.pop(clave, None)
+    datos['avisos'] = [traducir(aviso) for aviso in datos['avisos']]
+    datos['aviso'] = traducir(datos['aviso'])
     return datos
 
 
@@ -227,10 +244,13 @@ def preparar_envio_pagina(datos):
             comparacion[nombre] = dict(t=t[indices], derivas=[d[indices] for d in r['derivas']],
                                        paso=(t[1:] - t[:-1])[indices[1:] - 1] if len(t) > 1 else t[:0],
                                        maximos=[float(d.max()) for d in r['derivas']], pasos=len(t) - 1,
-                                       aviso=r['aviso'])
+                                       aviso=traducir(r['aviso']))
         datos['comparacion_metodos'] = comparacion
     if 'apoyo_comparacion' in datos:
-        datos['apoyo_comparacion'] = {k: v for k, v in datos['apoyo_comparacion'].items() if k != 'referencia_completa'}
+        apoyo = {k: v for k, v in datos['apoyo_comparacion'].items() if k != 'referencia_completa'}
+        apoyo['referencia_aviso'] = traducir(apoyo['referencia_aviso'])
+        apoyo['curvas'] = {nombre: dict(c, aviso=traducir(c['aviso'])) for nombre, c in apoyo['curvas'].items()}
+        datos['apoyo_comparacion'] = apoyo
     if 'estabilidad' in datos:
         # Las mallas X, Y de meshgrid se repiten fila a fila: basta con sus ejes (de 30 MB a ~3 MB).
         estabilidad = dict(datos['estabilidad'])
@@ -240,6 +260,13 @@ def preparar_envio_pagina(datos):
         estabilidad['color_ampliacion'] = malla(*estabilidad['color_ampliacion'])
         datos['estabilidad'] = estabilidad
     return datos
+
+
+def traducir(texto):
+    texto = str(texto)
+    for patron, ingles in traducciones:
+        texto = re.sub(patron, ingles, texto)
+    return texto
 
 
 def muestras(n):

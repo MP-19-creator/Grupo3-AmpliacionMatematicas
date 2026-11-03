@@ -14,8 +14,13 @@ import { crearCuerpo, crearFantasma, tiposCuerpo } from './cuerpos_web.js';
 const nombresEje = ['I₁', 'I₂', 'I₃'];
 const variableMetodo = { 'Euler': 'euler', 'Crank-Nicolson': 'cn', 'RK4': 'rk4' };
 const largoEjes = .86;
-// Cámara del espacio de fases proporcional al tamaño del elipsoide (radio R que envía Python).
-const vistaFases = (R) => [2.1*R, -3.6*R, 2.4*R];
+const largoL = .96, largoOmega = .92;            // poco más que los ejes: no salen del visor en los giros estables
+const vistaCuerpo = [2.55, -3.2, 1.47];          // cámara del visor de actitud
+const factorEstela = .7;                         // estelas algo más cortas que la ventana de la v1
+// Cámara del espacio de fases proporcional al mayor de los dos elipsoides.
+const vistaFases = (D) => [1.8*D, -3.05*D, 2.05*D];
+// Fps mínimos con bloom: por debajo, el visor pasa a calidad baja (sin bloom).
+const fpsMinimos = 40;
 
 export class PaginaMovimiento {
   titulo = '1  Attitude & phase space';
@@ -152,7 +157,7 @@ export class PaginaMovimiento {
       const enlace = document.createElement('a');
       enlace.href = URL.createObjectURL(new Blob(partes, { type: 'video/webm' }));
       const r = this.r;
-      enlace.download = `orbita_${this.vista}_${this.tipoCuerpo}_eje${r ? r.eje + 1 : ''}_${r ? r.nombre_metodo : ''}.webm`;
+      enlace.download = `orbita_${this.vista}_${this.tipoCuerpo}_axis${r ? r.eje + 1 : ''}_${r ? r.nombre_metodo : ''}.webm`;
       enlace.click();
       this.grabadora = null;
       boton.classList.remove('activo');
@@ -178,8 +183,8 @@ export class PaginaMovimiento {
 
   // ------------------------------------------------------------ escenas (una vez)
   construirEscenas() {
-    this.visorActitud = crearVisor(this.$('#visor-actitud'), { posicion: [2.35, -2.95, 1.35] });
-    this.visorFases = crearVisor(this.$('#visor-fases'), { posicion: vistaFases(1.48) });
+    this.visorActitud = crearVisor(this.$('#visor-actitud'), { posicion: vistaCuerpo });
+    this.visorFases = crearVisor(this.$('#visor-fases'), { posicion: vistaFases(1.48), sombras: false });
     for (const visor of [this.visorActitud, this.visorFases])
       visor.controles.addEventListener('start', () => { this.ultimaInteraccion = performance.now(); visor.controles.autoRotate = false; });
 
@@ -201,7 +206,7 @@ export class PaginaMovimiento {
     this.esferaPuntas = esferaReticula(largoEjes);
     this.escenaCuerpo.add(this.esferaPuntas);
     this.flechaL = crearFlecha(color('momento-l'), { radio: .009, punta: .075, emisivo: .35 });
-    this.flechaOmega = crearFlecha(color('omega'), { radio: .011, punta: .08, emisivo: 2 });
+    this.flechaOmega = crearFlecha(color('omega'), { radio: .011, punta: .08, emisivo: 1 });
     this.etiquetaL = crearEtiqueta('L', 'grande'); this.etiquetaL.element.style.color = 'var(--momento-l)';
     this.etiquetaOmega = crearEtiqueta('ω', 'grande'); this.etiquetaOmega.element.style.color = 'var(--omega)';
     this.grupoVectores = new THREE.Group();
@@ -272,25 +277,26 @@ export class PaginaMovimiento {
 
   dibujarEstelas() {
     this.vaciar(this.grupoEstelas);
-    const { t, ventana_estela: ventana, eje } = this.r;
+    const { t, eje } = this.r, ventana = factorEstela*this.r.ventana_estela;
     const R = this.r.movimiento.rotaciones;
     this.tubos = [];
     // Puntas de los tres ejes del cuerpo en ejes inerciales: columnas de R(q).
     for (let k = 0; k < 3; k++) {
       const puntas = R.map(M => [M[0][k]*largoEjes, M[1][k]*largoEjes, M[2][k]*largoEjes]);
       const principal = k === eje;
-      const tubo = crearTubo(puntas, t, { radio: principal ? .011 : .0065, color: color(`e${k+1}`), ventana,
-        opacidad: principal ? 1 : .5, brillo: principal ? 2.2 : 1.2 });
+      const tubo = crearTubo(puntas, t, { radio: principal ? .009 : .0055, color: color(`e${k+1}`), ventana,
+        opacidad: principal ? .9 : .35, brillo: principal ? 1.8 : 1 });
       this.grupoEstelas.add(tubo); this.tubos.push(tubo);
     }
     // Cono del espacio: la dirección de ω en ejes inerciales.
     if (this.tuboOmega) liberar(this.tuboOmega);
-    const direcciones = this.r.web.herpolhoda.map(w => { const n = Math.hypot(...w); return [w[0]/n*1.12, w[1]/n*1.12, w[2]/n*1.12]; });
-    this.tuboOmega = crearTubo(direcciones, t, { radio: .006, color: color('omega'), ventana, opacidad: .75, brillo: 1.8 });
+    const direcciones = this.r.web.herpolhoda.map(w => { const n = Math.hypot(...w); return [w[0]/n*largoOmega, w[1]/n*largoOmega, w[2]/n*largoOmega]; });
+    this.tuboOmega = crearTubo(direcciones, t, { radio: .005, color: color('omega'), ventana, opacidad: .55, brillo: 1.2 });
     this.grupoVectores.add(this.tuboOmega); this.tubos.push(this.tuboOmega);
     const L = this.r.movimiento.vector_momento, nL = Math.hypot(...L);
-    this.flechaL.apuntar(L.map(v => v/nL), 1.22);
-    this.etiquetaL.position.set(...L.map(v => v/nL*1.32));
+    this.flechaL.apuntar(L.map(v => v/nL), largoL);
+    // L un poco más allá que la etiqueta de ω: en el eje intermedio ω y L casi coinciden y se solapaban.
+    this.etiquetaL.position.set(...L.map(v => v/nL*(largoL + .17)));
   }
 
   dibujarPoinsot() {
@@ -301,7 +307,7 @@ export class PaginaMovimiento {
     // Elipsoide de energía unido al cuerpo, con la polhoda que va dejando.
     this.elipsoidePoinsot = new THREE.Group();
     const [X, Y, Z] = web.elipsoide_energia;
-    const malla = new THREE.Mesh(geometriaElipsoide(X, Y, Z), materialFresnel(color('energia'), { opacidad: .6, nucleo: .1 }));
+    const malla = new THREE.Mesh(geometriaElipsoide(X, Y, Z), materialFresnel(color('energia'), superficie(.6, .1)));
     malla.renderOrder = 2;
     this.elipsoidePoinsot.add(malla, rejillaElipsoide(X, Y, Z, 8, color('energia'), .28));
     const polhoda = crearTubo(U.map(u => [u[0], u[1], u[2]]), t, { radio: .012*R, color: color('polhoda'), ventana: -2, brillo: 1.6 });
@@ -340,7 +346,7 @@ export class PaginaMovimiento {
     this.haloContacto = crearHalo(color('punto'), .32*R);
     this.flechaLPoinsot = crearFlecha(color('momento-l'), { radio: .007*R, punta: .07*R, emisivo: .3 });
     this.flechaLPoinsot.apuntar(n, d*1.55);
-    this.flechaOmegaPoinsot = crearFlecha(color('omega'), { radio: .008*R, punta: .07*R, emisivo: 2 });
+    this.flechaOmegaPoinsot = crearFlecha(color('omega'), { radio: .008*R, punta: .07*R, emisivo: 1 });
     const eL = crearEtiqueta('L', 'grande'); eL.element.style.color = 'var(--momento-l)'; eL.position.copy(n).multiplyScalar(d*1.68);
     this.etiquetaOmegaPoinsot = crearEtiqueta('ω', 'grande'); this.etiquetaOmegaPoinsot.element.style.color = 'var(--omega)';
     const eP = crearEtiqueta('invariable plane', 'pequena'); eP.element.style.color = 'var(--acento)';
@@ -348,11 +354,12 @@ export class PaginaMovimiento {
     eP.position.copy(n).multiplyScalar(d).addScaledVector(u, -radioPlano*.42);
     this.grupoPoinsot.add(this.contacto, this.haloContacto, this.flechaLPoinsot, this.flechaOmegaPoinsot, eL, this.etiquetaOmegaPoinsot, eP);
 
-    // Cámara: L hacia arriba, el plano encima y el elipsoide rodando por debajo (la figura clásica).
+    // Cámara: L hacia arriba y vista desde encima del plano, para ver la herpolhoda que deja el
+    // punto de contacto y el elipsoide entero rodando por debajo (la figura clásica).
     const v = new THREE.Vector3().crossVectors(n, u);
     this.vistaPoinsot = {
-      posicion: n.clone().multiplyScalar(-.55*R).addScaledVector(u, 3.9*R).addScaledVector(v, -1.9*R).toArray(),
-      objetivo: n.clone().multiplyScalar(d*.35).toArray(), arriba: n.toArray(),
+      posicion: n.clone().multiplyScalar(2.4*R).addScaledVector(u, 4*R).addScaledVector(v, -1.8*R).toArray(),
+      objetivo: n.clone().multiplyScalar(d*.3).toArray(), arriba: n.toArray(),
     };
   }
 
@@ -360,11 +367,6 @@ export class PaginaMovimiento {
     this.vaciar(this.grupoFases);
     const { t, U, web, movimiento, ventana_estela } = this.r;
     const R = movimiento.radio;
-    // Si cambia el tamaño, la cámara se acerca o aleja conservando el ángulo elegido.
-    if (this.escalaFases && Math.abs(R/this.escalaFases - 1) > 1e-6) {
-      const k = R/this.escalaFases, c = this.visorFases;
-      volarCamara(c, c.camara.position.clone().multiplyScalar(k).toArray(), c.controles.target.clone().multiplyScalar(k).toArray(), null, 800);
-    }
     this.escalaFases = R;
     for (let k = 0; k < 3; k++) {
       const e = new THREE.Vector3(k === 0, k === 1, k === 2);
@@ -377,9 +379,18 @@ export class PaginaMovimiento {
     }
     this.elipsoides = new THREE.Group();
     const [Xe, Ye, Ze] = web.elipsoide_energia, [Xm, Ym, Zm] = web.elipsoide_momento;
-    const energia = new THREE.Mesh(geometriaElipsoide(Xe, Ye, Ze), materialFresnel(color('energia'), { opacidad: .55, nucleo: .08 }));
-    const momento = new THREE.Mesh(geometriaElipsoide(Xm, Ym, Zm), materialFresnel(color('momento'), { opacidad: .4, nucleo: .05 }));
+    const energia = new THREE.Mesh(geometriaElipsoide(Xe, Ye, Ze), materialFresnel(color('energia'), superficie(.55, .08)));
+    const momento = new THREE.Mesh(geometriaElipsoide(Xm, Ym, Zm), materialFresnel(color('momento'), superficie(.4, .05)));
     energia.renderOrder = momento.renderOrder = 2;
+    // Si cambia el tamaño, la cámara se acerca o aleja conservando el ángulo elegido.
+    // La distancia sigue al mayor de los dos elipsoides (el de L² puede sobresalir del de 2T).
+    const D = Math.max(R, ...momento.geometry.userData.semiejes);
+    if (!this.distanciaFases) this.visorFases.camara.position.set(...vistaFases(D));
+    else if (Math.abs(D/this.distanciaFases - 1) > 1e-6) {
+      const k = D/this.distanciaFases, c = this.visorFases;
+      volarCamara(c, c.camara.position.clone().multiplyScalar(k).toArray(), c.controles.target.clone().multiplyScalar(k).toArray(), null, 800);
+    }
+    this.distanciaFases = D;
     this.elipsoides.add(energia, momento, rejillaElipsoide(Xe, Ye, Ze, 8, color('energia'), .16), rejillaElipsoide(Xm, Ym, Zm, 12, color('momento'), .08));
     this.grupoFases.add(this.elipsoides);
     for (const curva of movimiento.separatriz) {
@@ -490,7 +501,7 @@ export class PaginaMovimiento {
       volarCamara(this.visorActitud, posicion, objetivo, arriba, 1100);
     } else {
       this.visorActitud.usarEscena(this.escenaCuerpo, this.visorActitud.camara);
-      volarCamara(this.visorActitud, [2.35, -2.95, 1.35], [0, 0, 0], [0, 0, 1], 1100);
+      volarCamara(this.visorActitud, vistaCuerpo, [0, 0, 0], [0, 0, 1], 1100);
     }
     this.actualizarBotones();
   }
@@ -508,8 +519,8 @@ export class PaginaMovimiento {
   }
   restablecerCamaras() {
     if (this.vista === 'poinsot') volarCamara(this.visorActitud, this.vistaPoinsot.posicion, this.vistaPoinsot.objetivo, this.vistaPoinsot.arriba);
-    else volarCamara(this.visorActitud, [2.35, -2.95, 1.35], [0, 0, 0], [0, 0, 1]);
-    volarCamara(this.visorFases, vistaFases(this.escalaFases ?? 1.48), [0, 0, 0], [0, 0, 1]);
+    else volarCamara(this.visorActitud, vistaCuerpo, [0, 0, 0], [0, 0, 1]);
+    volarCamara(this.visorFases, vistaFases(this.distanciaFases ?? 2), [0, 0, 0], [0, 0, 1]);
   }
   pulsarTecla(tecla) {
     const cuerpos = Object.keys(tiposCuerpo);
@@ -535,10 +546,12 @@ export class PaginaMovimiento {
     // Entrada cinematográfica: la cámara llega desde lejos.
     const c = this.visorActitud.camara;
     c.position.set(7, -9, 5.5);
-    volarCamara(this.visorActitud, [2.35, -2.95, 1.35], [0, 0, 0], [0, 0, 1], 2600);
-    const R = this.escalaFases ?? 1.48;
-    this.visorFases.camara.position.set(4*R, -6*R, 4.6*R);
-    volarCamara(this.visorFases, vistaFases(R), [0, 0, 0], [0, 0, 1], 2800);
+    volarCamara(this.visorActitud, vistaCuerpo, [0, 0, 0], [0, 0, 1], 2600);
+    const D = this.distanciaFases ?? 2;
+    this.visorFases.camara.position.set(4*D, -6*D, 4.6*D);
+    volarCamara(this.visorFases, vistaFases(D), [0, 0, 0], [0, 0, 1], 2800);
+    // Tras la llegada de la cámara se miden los fps: si el equipo no llega, se quita el bloom.
+    this.medidaFps = { inicio: performance.now() + 3000, fotogramas: 0 };
   }
 
   mostrar(visible) {
@@ -555,8 +568,8 @@ export class PaginaMovimiento {
     interpolarCuaternion(this.quats, indice, fraccion, this.grupoCuerpo.quaternion);
     const w = interpolarPunto(r.web.herpolhoda, indice, fraccion, this._w ??= new THREE.Vector3());
     const modulo = w.length();
-    this.flechaOmega.apuntar(w.clone().divideScalar(modulo), 1.12);
-    this.etiquetaOmega.position.copy(w).multiplyScalar(1.24/modulo);
+    this.flechaOmega.apuntar(w.clone().divideScalar(modulo), largoOmega);
+    this.etiquetaOmega.position.copy(w).multiplyScalar((largoOmega + .05)/modulo);
     // Poinsot: el elipsoide gira con el cuerpo y toca el plano en ω.
     this.elipsoidePoinsot.quaternion.copy(this.grupoCuerpo.quaternion);
     this.contacto.position.copy(w); this.haloContacto.position.copy(w);
@@ -600,6 +613,7 @@ export class PaginaMovimiento {
 
   fotograma(ahora) {
     if (!this.visible) return;
+    this.medirFps(ahora);
     if (this.inicioPulso !== undefined && this.pulso) {
       const s = (ahora - this.inicioPulso) / 900;
       if (s < 1) { this.pulso.scale.setScalar((.1 + 1.1*s)*this.escalaFases); this.pulso.material.opacity = (1 - s)*intensidadBrillo; }
@@ -611,6 +625,25 @@ export class PaginaMovimiento {
     this.visorActitud.dibujar();
     this.visorFases.dibujar();
   }
+
+  // Calidad automática: 3 s de fotogramas con esta página a la vista; por debajo de fpsMinimos, sin bloom.
+  medirFps(ahora) {
+    const m = this.medidaFps;
+    if (!m || ahora < m.inicio) return;
+    if (this.ultimoFotogramaMedido && ahora - this.ultimoFotogramaMedido > 500) { m.inicio = ahora; m.fotogramas = 0; }
+    this.ultimoFotogramaMedido = ahora;
+    m.fotogramas++;
+    if (ahora - m.inicio < 3000) return;
+    const fps = 1000*m.fotogramas/(ahora - m.inicio);
+    if (fps < fpsMinimos) this.visorActitud.calidad = this.visorFases.calidad = 'baja';
+    console.info(`[ORBITA] ${fps.toFixed(0)} fps · ${fps < fpsMinimos ? 'bloom off' : 'bloom on'}`);
+    this.medidaFps = null;
+  }
+}
+
+// Opacidad de las superficies translúcidas: sobre el papel claro hacen falta más para que se vean.
+function superficie(opacidad, nucleo) {
+  return temaOscuro() ? { opacidad, nucleo } : { opacidad: Math.min(1, 1.7*opacidad), nucleo: nucleo + .12 };
 }
 
 // Esfera de referencia para las puntas de los ejes: meridianos y paralelos cada 30°.
@@ -688,11 +721,15 @@ class GraficaOmega {
     g.scale(this.dpr, this.dpr);
     g.font = `10px ${getComputedStyle(document.documentElement).getPropertyValue('--mono')}`;
     g.fillStyle = col.tenue; g.strokeStyle = col.linea; g.lineWidth = 1;
-    const marcas = [-this.m/1.15, -this.m/2.3, 0, this.m/2.3, this.m/1.15];
+    // Marcas redondas (1, 2, 2,5 o 5 por potencia de 10), unas dos por semieje.
+    const bruto = this.m/1.15/2.2, potencia = 10**Math.floor(Math.log10(bruto));
+    const pasoY = [1, 2, 2.5, 5, 10].map(f => f*potencia).find(p => p >= bruto*.999);
+    const marcas = [];
+    for (let v = -Math.floor(this.m/pasoY)*pasoY; v <= this.m + 1e-12; v += pasoY) marcas.push(+v.toPrecision(6));
     for (const v of marcas) {
       g.beginPath(); g.moveTo(this.margen.izquierda, this.y(v)); g.lineTo(this.ancho - this.margen.derecha, this.y(v));
       g.strokeStyle = v === 0 ? col.linea2 : col.linea; g.stroke();
-      g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(v.toFixed(2), this.margen.izquierda - 6, this.y(v));
+      g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(String(v).replace('-', '−'), this.margen.izquierda - 6, this.y(v));
     }
     const paso = [1, 2, 5, 10, 20, 25, 50][[1, 2, 5, 10, 20, 25, 50].findIndex(p => this.tf / p <= 10)] ?? 50;
     g.textAlign = 'center'; g.textBaseline = 'top';

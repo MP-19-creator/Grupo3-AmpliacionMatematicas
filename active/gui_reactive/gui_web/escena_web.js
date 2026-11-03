@@ -13,7 +13,9 @@ export { THREE };
 
 // Intensidad común de los brillos (bloom, cabezas de estela, flechas y halos).
 // 1 = muy luminoso; bajar el número si los destellos tapan el contenido.
-export const intensidadBrillo = .45;
+export const intensidadBrillo = .32;
+// Densidad de píxeles máxima de los visores 3D: con el escalado de Windows al 150 % se dibujarían 2,25 veces más píxeles.
+const maximaDensidad = 1.25;
 
 // ------------------------------------------------------------ colores (definidos en style_web.css)
 export function color(nombre) {
@@ -22,13 +24,13 @@ export function color(nombre) {
 export function temaOscuro() { return document.documentElement.dataset.tema !== 'claro'; }
 
 // ------------------------------------------------------------ visor: renderizador, cámara, controles y bloom
-export function crearVisor(contenedor, { arriba = [0, 0, 1], posicion = [2.4, -2.6, 1.6], fov = 32 } = {}) {
+export function crearVisor(contenedor, { arriba = [0, 0, 1], posicion = [2.4, -2.6, 1.6], fov = 32, sombras = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximaDensidad));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = sombras;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   contenedor.appendChild(renderer.domElement);
 
@@ -54,7 +56,7 @@ export function crearVisor(contenedor, { arriba = [0, 0, 1], posicion = [2.4, -2
 
   const composer = new EffectComposer(renderer);
   const pasoEscena = new RenderPass(escena, camara);
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .6*intensidadBrillo, .4, .95);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .5*intensidadBrillo, .35, .95);
   composer.addPass(pasoEscena);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());

@@ -34,9 +34,13 @@ Python calcula y envía los resultados en JSON. El navegador no calcula nada: di
 - la herpolhoda, R(q)·ω;
 - el plano invariable, a distancia 2T/|L|;
 - la familia de polhodas, integrada con RK4;
-- la orientación de los tres integradores a la vez.
+- la orientación de los tres integradores a la vez;
+- el periodo de la polhoda sin cancelaciones (`periodo_polhoda_web`). `Polhode_period` redondea C = L² − 2T·I₂ a 12 cifras y con ε ≲ 10⁻⁶ lo toma por la separatriz (P = ∞). Aquí cada diferencia es una suma de términos del mismo signo y K se evalúa con el módulo complementario. Con ε = 10⁻⁷ da P/2 = 59,4 s, frente a 59,6 s simulados. Donde la v1 es válida, coincide con ella;
+- los instantes de volteo de cada esquema (`instantes_cambio_signo` de la v1), para la tabla «Flips per scheme» de Invariantes en el eje intermedio.
 
-`gui_web.py` solo reduce lo que envía, sin cambiar ningún valor: submuestrea las series largas a 2000 puntos, como hacen las páginas de la v1 al dibujar, y de las mallas de estabilidad envía solo sus ejes, porque las filas de `meshgrid` se repiten.
+`gui_web.py` solo reduce lo que envía, sin cambiar ningún valor: submuestrea las series largas a 2000 puntos, como hacen las páginas de la v1 al dibujar, y de las mallas de estabilidad envía solo sus ejes, porque las filas de `meshgrid` se repiten. También traduce al inglés los avisos que la v1 escribe en español (`traducciones`).
+
+Diferencias de controles con la v1: el Δt mínimo es 10⁻³ s (en la v1, 10⁻⁶). Debajo de Time se indica en vivo el número de pasos N = t_f/Δt: en ámbar por encima de 20 000 y en rojo si supera el límite de pasos de `PEI1.py`.
 
 Todo ello usa funciones de física que ya existían.
 
@@ -80,5 +84,8 @@ Para quitar la versión web basta con borrar `PEI1_web.py`, `gui_web.py` y la ca
 
 ## Ajustes rápidos
 
-- **Brillo de estelas, flechas y halos:** constante `intensidadBrillo` al principio de `escena_web.js` (0 = sin brillo, 1 = máximo).
+- **Brillo de estelas, flechas y halos:** constante `intensidadBrillo` al principio de `escena_web.js` (0 = sin brillo, 1 = máximo; ahora 0,32).
+- **Longitud de las estelas:** `factorEstela` en `page_attitude_web.js` (fracción de la ventana de la v1; ahora 0,7).
+- **Calidad automática:** al entrar se miden los fps de la página 1 durante 3 s; por debajo de `fpsMinimos` (40, en `page_attitude_web.js`) se quita el bloom. La consola del navegador indica el resultado (`[ORBITA] … fps`). La densidad de píxeles de los visores 3D está limitada a 1,25 (`maximaDensidad`, en `escena_web.js`).
+- **Pantallas pequeñas:** `style_web.css` compacta la interfaz por debajo de 1440 y de 1100 px de ancho (comprobado a 1920×1080, 1280×720 y 1024×768).
 - **Duración de una reproducción completa:** `duracion_reproduccion` en `gui_web.py` (20 s, como en la v1).

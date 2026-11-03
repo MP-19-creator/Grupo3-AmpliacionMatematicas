@@ -19,6 +19,7 @@ const entradas = {};                  // elementos de cada control, para escribi
 const paginas = [];
 const nombresCortos = { 'Euler': 'Euler', 'Crank-Nicolson': 'CN', 'RK4': 'RK4' };
 const velocidades = [.25, .5, 1, 2, 4, 8];
+const pasosLargos = 20000;            // a partir de aquí el cálculo tarda varios segundos
 const atajos = [['Space', 'Play / pause'], ['← →', 'Step through time'], ['1 – 4', 'Pages'], ['↵', 'Compute'],
   ['A', 'Cycle initial spin axis'], ['↑ ↓', 'Cycle integrator'], ['M', 'Fixed / adaptive step'], ['+ −', 'Playback speed'],
   ['B', 'Cycle body shape'], ['O', 'Body / Poinsot view'], ['C', 'Compare the three integrators'], ['V', 'Reset cameras'], ['G', 'Record the 3D view (.webm)'],
@@ -48,9 +49,33 @@ function marcarCambios() {
   const { I1, I2, I3 } = formulario, orden = $('#orden-inercias');
   const bien = I1 < I2 && I2 < I3;
   orden.classList.toggle('mal', !bien);
-  orden.innerHTML = bien ? (I1 + I2 >= I3 ? 'I<sub>1</sub> &lt; I<sub>2</sub> &lt; I<sub>3</sub> · physical body'
+  // Un solo <span>: en el contenedor flex, cada subíndice suelto quedaría separado por el hueco.
+  orden.innerHTML = `<span>${bien ? (I1 + I2 >= I3 ? 'I<sub>1</sub> &lt; I<sub>2</sub> &lt; I<sub>3</sub> · physical body'
     : 'I<sub>1</sub> &lt; I<sub>2</sub> &lt; I<sub>3</sub> · I<sub>1</sub> + I<sub>2</sub> &lt; I<sub>3</sub>: not a real body')
-    : 'Requires I<sub>1</sub> &lt; I<sub>2</sub> &lt; I<sub>3</sub>';
+    : 'Requires I<sub>1</sub> &lt; I<sub>2</sub> &lt; I<sub>3</sub>'}</span>`;
+  marcarPasos();
+}
+
+// Pasos que dará el paso fijo, antes de pulsar Compute (N = t_f/Δt, como en integrar_trayectoria).
+function marcarPasos() {
+  const indicador = $('#pasos-estimados');
+  if (formulario.adaptativo) {
+    indicador.className = 'orden';
+    indicador.textContent = 'Adaptive step · N set by the tolerance';
+    return;
+  }
+  const N = Math.max(1, Math.ceil(formulario.tf / formulario.dt)), limite = estado.configuracion.limite_pasos?.[formulario.metodo];
+  const texto = `N = ${N.toLocaleString('en')} steps`;
+  if (limite && N > limite) {
+    indicador.className = 'orden mal';
+    indicador.textContent = `${texto} · over the ${limite.toLocaleString('en')}-step limit: t_f will be cut`;
+  } else if (N > pasosLargos) {
+    indicador.className = 'orden lento';
+    indicador.textContent = `${texto} · long computation`;
+  } else {
+    indicador.className = 'orden';
+    indicador.textContent = texto;
+  }
 }
 
 function mostrarOcupado(texto, ocupado = true, error = false) {
@@ -101,7 +126,8 @@ function recibirResultado(datos, parametros) {
   $('#resumen').innerHTML = `${datos.nombre_metodo} · ${datos.pasos.toLocaleString('en')} steps · ${datos.tiempo_calculo.toFixed(2)} s`
     + (datos.avisos.length ? `<br><span style="color:var(--aviso)">${datos.avisos.join(' · ')}</span>` : '');
   for (const texto of datos.avisos) aviso(texto);
-  mostrarOcupado(`${nombresCortos[datos.nombre_metodo]} · ${datos.pasos.toLocaleString('en')} steps · ${datos.tiempo_calculo.toFixed(2)} s`, false);
+  estado.resumenCalculo = `${nombresCortos[datos.nombre_metodo]} · ${datos.pasos.toLocaleString('en')} steps · ${datos.tiempo_calculo.toFixed(2)} s`;
+  mostrarOcupado(estado.resumenCalculo, false);
   $('#reloj-total').textContent = `/ ${formatoTiempo(datos.t.at(-1))} s`;
   dibujarVolteosPista();
   marcarCambios();
@@ -114,7 +140,7 @@ async function pedirPagina(numero) {
   if (estado.datosPagina[clave]) return estado.datosPagina[clave];
   mostrarOcupado(numero === 0 ? 'Integrating the three schemes…' : 'Preparing view…');
   const datos = await pedir('/api/pagina', { numero, tf_estudio: estado.tfEstudio });
-  mostrarOcupado(datos.error ? 'Error in this view' : 'Ready', false, !!datos.error);
+  mostrarOcupado(datos.error ? 'Error in this view' : estado.resumenCalculo ?? 'Ready', false, !!datos.error);
   if (datos.error) { aviso(datos.error, true); return null; }
   return (estado.datosPagina[clave] = datos);
 }
@@ -269,7 +295,7 @@ function crearControles() {
   });
   for (const v of velocidades) {
     const b = document.createElement('button');
-    b.textContent = `×${v === .25 ? '¼' : v === .5 ? '½' : v}`;
+    b.textContent = `×${v}`;
     b.addEventListener('click', () => cambiarVelocidad(v));
     $('#velocidades').appendChild(b);
   }
@@ -445,6 +471,7 @@ async function iniciar() {
   estado.tfEstudio = inicio.configuracion.controles.tf_estudio.inicial;
   crearControles();
   escribirParametros(inicio.parametros ?? valoresIniciales());
+  marcarCambios();
 
   // Las cuatro páginas, como en gui.py: cada una dibuja los datos que le entrega el principal.
   const contexto = { estado, formulario, pedirPagina, aviso, mostrarInstante, nombresCortos, formatoNumero };

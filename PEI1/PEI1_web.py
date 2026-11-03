@@ -11,10 +11,10 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from numpy import array, arcsin, clip, cos, diff, einsum, isfinite, linspace, nan, searchsorted, sin, sqrt
+from numpy import array, arcsin, clip, cos, diff, einsum, isfinite, linspace, nan, pi, searchsorted, sin, sqrt
 from numpy.linalg import norm
-from PEI1 import (metodos, calcular_trayectoria, comparar_metodos, preparar_apoyo_comparacion,
-    preparar_datos_estabilidad, calcular_estudio_error, integrar_trayectoria)
+from PEI1 import (metodos, metodos_implicitos, limite_pasos,calcular_trayectoria, comparar_metodos, preparar_apoyo_comparacion,
+    preparar_datos_estabilidad, calcular_estudio_error, integrar_trayectoria, instantes_cambio_signo)
 from active.gui_reactive.gui_web import crear_interfaz_web
 from active.space_physics.eje_intermedio import (Rigid_body_problem, Rotation_matrix, Kinetic_energy_2T,
     Angular_momentum_L2, Inertial_angular_momentum, Energy_ellipsoid, Momentum_ellipsoid, Separatrix,
@@ -34,6 +34,8 @@ def iniciar_programa_web():
             resultados_actuales.clear()
             resultados_actuales.update(parametros, metodo=metodos[parametros['nombre_metodo']])
             resultados_actuales.update(resultado)
+            # Periodo de la polhoda sin cancelaciones: cerca de la separatriz la v1 lo da como infinito.
+            resultados_actuales['movimiento'].update(periodo_polhoda_web(parametros['I'], resultado['U'][0, :3]))
             # Lo que solo dibuja la versión web, preparado con la física existente.
             resultados_actuales['web'] = preparar_datos_web(resultados_actuales)
             parametros_actuales = dict(parametros)
@@ -57,8 +59,13 @@ def iniciar_programa_web():
                 if 'apoyo_comparacion' not in resultados_actuales:
                     resultados_actuales['apoyo_comparacion'] = preparar_apoyo_comparacion(
                         resultados_actuales, resultados_actuales['comparacion_metodos'])
+                    # Volteos de cada esquema (solo web): instantes en que ω del eje inicial cambia de signo.
+                    resultados_actuales['volteos_metodos'] = {
+                        nombre: instantes_cambio_signo(r['t'], r['U'][:, resultados_actuales['eje']])
+                        for nombre, r in resultados_actuales['comparacion_metodos'].items()}
                 return dict(comparacion_metodos=resultados_actuales['comparacion_metodos'],
-                            apoyo_comparacion=resultados_actuales['apoyo_comparacion'])
+                            apoyo_comparacion=resultados_actuales['apoyo_comparacion'],
+                            volteos_metodos=resultados_actuales['volteos_metodos'])
             if 'estabilidad' not in resultados_actuales:
                 resultados_actuales['estabilidad'] = preparar_datos_estabilidad(resultados_actuales, resultados_actuales['comparacion_metodos'])
             return dict(estabilidad=resultados_actuales['estabilidad'])
@@ -69,6 +76,9 @@ def iniciar_programa_web():
         return {}
 
     interfaz = crear_interfaz_web(list(metodos), calcular_simulacion, preparar_pagina)
+    # La GUI avisa antes de calcular si el paso fijo superaría el límite de pasos de PEI1.py.
+    interfaz['configuracion']['limite_pasos'] = {
+        nombre: limite_pasos['lento' if metodo in metodos_implicitos else 'rapido'] for nombre, metodo in metodos.items()}
     # Aquí se inicia el primer cálculo, una vez construida la interfaz.
     interfaz['solicitar_calculo']()
     return interfaz
@@ -92,6 +102,35 @@ def preparar_datos_web(datos):
                 separatriz_momento=Separatrix(I, L2/I[1]),
                 intervalo_volteos=dict(teorico=movimiento['periodo']/2,
                                        medido=float(diff(volteos).mean()) if len(volteos) >= 2 else nan))
+
+
+def periodo_polhoda_web(I, w):
+    """Periodo exacto de ω(t), P = 4 K(k)/ν, sin cancelaciones cerca de la separatriz.
+
+    Polhode_period redondea C = L² − 2T·I2 a 12 cifras y con ε ≲ 10⁻⁶ lo toma por la separatriz.
+    Aquí cada diferencia se escribe como suma de términos del mismo signo,
+        C = Σ Ii (Ii − I2) ωi²,   2T·I3 − L² = Σ Ii (I3 − Ii) ωi²,   L² − 2T·I1 = Σ Ii (Ii − I1) ωi²,
+    y K se evalúa con el módulo complementario m1 = 1 − k² = (I3 − I1)|C| / (...), que es el pequeño:
+        K = π / (2 AGM(1, √m1)).
+    Solo C = 0 exacto (ε = 0) es la separatriz.
+    """
+    I1, I2, I3 = I
+    w1, w2, w3 = (float(v)**2 for v in w)
+    C = I1*(I1 - I2)*w1 + I3*(I3 - I2)*w3
+    if C == 0:
+        return dict(periodo=float('inf'), lado_separatriz=0, casimir=0.)
+    hasta_I3 = I1*(I3 - I1)*w1 + I2*(I3 - I2)*w2           # 2T·I3 − L²
+    desde_I1 = I2*(I2 - I1)*w2 + I3*(I3 - I1)*w3           # L² − 2T·I1
+    if C > 0:                                              # la polhoda rodea I3
+        m1 = (I3 - I1)*C / ((I3 - I2)*desde_I1)
+        nu = sqrt((I3 - I2)*desde_I1 / (I1*I2*I3))
+    else:                                                  # la polhoda rodea I1
+        m1 = (I3 - I1)*(-C) / ((I2 - I1)*hasta_I3)
+        nu = sqrt((I2 - I1)*hasta_I3 / (I1*I2*I3))
+    a, g = 1., sqrt(m1)
+    while abs(a - g) > 1e-15*a:
+        a, g = (a + g)/2, sqrt(a*g)
+    return dict(periodo=float(4*(pi/(2*a))/nu), lado_separatriz=1 if C > 0 else -1, casimir=C)
 
 
 def calcular_familia_polhodas(I, L2, niveles=4):

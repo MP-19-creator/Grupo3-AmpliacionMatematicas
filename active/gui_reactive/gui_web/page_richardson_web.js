@@ -108,7 +108,7 @@ export class PaginaPrecision {
         linea(elegido, indices.map(i => t[i]), indices.map(i => suelo(estimado[i])), { seleccionado: true, name: 'Richardson estimate' }),
         { ...linea('RK4', indices.map(i => t[i]), indices.map(i => suelo(referencia[i])), { discontinua: true, name: 'Reference RK4 · 8N steps' }),
           line: { color: css('punto'), width: 1.4, dash: 'dash' } },
-      ], layoutBase({ x: { range: [0, t.at(-1)], title: { text: 't (s)' } }, y: { type: 'log', title: { text: '|error|' }, tickformat: '.0e' }, leyenda: true }));
+      ], layoutBase({ x: { range: [0, t.at(-1)], title: { text: 't (s)' } }, y: { type: 'log', title: { text: '|error|' }, dtick: 1 }, leyenda: true }));
     } else {
       dibujarGrafica(this.$('#g-error'), [], layoutBase({ x: { visible: false }, y: { visible: false },
         annotations: [{ text: 'The scheme diverges in this interval. Reduce Δt.', showarrow: false, font: { color: css('aviso'), size: 13 } }] }));

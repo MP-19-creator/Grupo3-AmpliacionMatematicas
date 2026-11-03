@@ -123,29 +123,39 @@ export class PaginaConservacion {
     dibujarGrafica(this.$('#g-paso'), trazas, layoutBase({ x: { range: [0, tf], title: { text: 't (s)' } },
       y: { type: 'log', range: [Math.log10(lo/3), Math.log10(hi*3)], title: { text: 'Δt (s)' }, ...(constante ? { tickvals: [lo], ticktext: [lo.toPrecision(3)] } : {}) } }));
 
+    // Con paso adaptativo cada esquema elige su Δt para la misma tolerancia: el número de pasos pasa a ser el dato clave.
+    const adaptativo = this.r.adaptativo, destacada = adaptativo ? ' class="destacada"' : '';
     const filas = metodos.map(n => {
       const c = comparacion[n];
       return `<tr class="${n === elegido ? 'elegido' : ''}"><td><span class="metodo" style="--c:${colorMetodo(n)}"><i></i>${cortos[n]}</span></td>
-        ${c.maximos.map(v => `<td>${exp(v)}</td>`).join('')}<td>${c.pasos >= 1e4 ? `${Math.round(c.pasos/1e3)}k` : c.pasos >= 1e3 ? `${(c.pasos/1e3).toFixed(1)}k` : c.pasos}</td></tr>`;
+        ${c.maximos.map(v => `<td>${exp(v)}</td>`).join('')}<td${destacada}>${c.pasos >= 1e4 ? `${Math.round(c.pasos/1e3)}k` : c.pasos >= 1e3 ? `${(c.pasos/1e3).toFixed(1)}k` : c.pasos}</td></tr>`;
     }).join('');
     const truncados = metodos.filter(n => comparacion[n].aviso);
     this.$('#lateral-invariantes').innerHTML = `
       <div class="rotulo">Max drift · |·|</div>
-      <table class="tabla"><thead><tr><th>Scheme</th><th>2T</th><th>L²</th><th>|q|</th><th>N</th></tr></thead><tbody>${filas}</tbody></table>
+      <table class="tabla"><thead><tr><th>Scheme</th><th>2T</th><th>L²</th><th>|q|</th><th${destacada}>N</th></tr></thead><tbody>${filas}</tbody></table>
       <p class="nota">2T, L² and |q| are exact invariants of the rigid body: <b>every curve on this page is numerical error</b>.</p>
-      <div class="dato-grande"><span class="rotulo">${this.r.adaptativo ? 'Adaptive step' : 'Fixed step'}</span>
-        <b class="mono">${this.r.adaptativo ? `tol ${this.r.tol.toExponential(0)}` : `Δt = ${this.ctx.formatoNumero(this.r.dt_utilizado)} s`}</b></div>
+      <div class="dato-grande"><span class="rotulo">${adaptativo ? 'Adaptive step' : 'Fixed step'}</span>
+        <b class="mono">${adaptativo ? `tol ${this.r.tol.toExponential(0)}` : `Δt = ${this.ctx.formatoNumero(this.r.dt_utilizado)} s`}</b></div>
       ${truncados.length ? `<p class="nota aviso">Truncated: ${truncados.map(n => `${cortos[n]} (${comparacion[n].aviso})`).join(' · ')}</p>` : ''}
-      <p class="nota"><b style="color:var(--euler)">Euler</b> (order 1): the drift accumulates, as |R(iy)| &gt; 1 predicts.<br>
+      ${adaptativo ? `<p class="nota">Same tolerance for the three schemes: each one chooses its own Δt. Compare the error <b>and the number of steps N</b>.</p>
+      <p class="nota"><b style="color:var(--euler)">Euler</b> (order 1): by far the most steps to meet the tolerance.<br>
+        <b style="color:var(--cn)">Crank–Nicolson</b> (order 2): |R(iy)| = 1, the invariants oscillate without accumulating.<br>
+        <b style="color:var(--rk4)">RK4</b> (order 4): the fewest steps for the same tolerance.</p>`
+      : `<p class="nota"><b style="color:var(--euler)">Euler</b> (order 1): the drift accumulates, as |R(iy)| &gt; 1 predicts.<br>
         <b style="color:var(--cn)">Crank–Nicolson</b> (order 2): it oscillates without accumulating (|R(iy)| = 1).<br>
-        <b style="color:var(--rk4)">RK4</b> (order 4): the smallest error at the same Δt.</p>`;
+        <b style="color:var(--rk4)">RK4</b> (order 4): the smallest error at the same Δt.</p>`}`;
     this.$('#contexto-invariantes').textContent = this.conSigno ? 'Signed: positive grows, negative shrinks · symmetric log scale'
+      : adaptativo ? 'Same problem, same tolerance · compare the error and the steps each scheme needs'
       : 'Same problem, same parameters · compare the size of the numerical error';
   }
 
   // ------------------------------------------------------------ trayectorias transversales
   dibujarTrayectorias() {
     const apoyo = this.datos.apoyo_comparacion, elegido = this.r.nombre_metodo, tf = this.r.t.at(-1);
+    const estable = this.r.eje !== 1;
+    // Eje intermedio: la gráfica grande es el crecimiento e^{λt}; la proyección (una V sobre la separatriz) pasa a la derecha.
+    this.$('#graficas-trayectorias').classList.toggle('inestable', !estable);
     const [j, k] = apoyo.transversales;
     const curvas = Object.entries(apoyo.curvas);
     const referencia = apoyo.curvas['Referencia RK4'];
@@ -170,21 +180,37 @@ export class PaginaConservacion {
     if (tg.length > 1) trazas.push({ type: 'scatter', mode: 'lines', x: tg, y: guia, name: 'Local guide ∝ e<sup>λt</sup>',
       line: { color: css('mal'), width: 1.4, dash: 'dot' }, hovertemplate: '%{y:.2e}' });
     dibujarGrafica(this.$('#g-perturbacion'), trazas, layoutBase({ x: { range: rango, title: { text: 't (s)' } },
-      y: { type: 'log', title: { text: 'norm (rad/s)' }, tickformat: '.0e' }, leyenda: tg.length > 1 }));
+      y: { type: 'log', title: { text: 'norm (rad/s)' }, dtick: 1 }, leyenda: tg.length > 1 }));
 
-    const filas = curvas.map(([n, c]) => {
-      const error = P && isFinite(P) && c.periodo ? 100*(c.periodo/P - 1) : null;
-      return `<tr class="${n === elegido ? 'elegido' : ''}"><td><span class="metodo" style="--c:${colorMetodo(n)}"><i></i>${cortos[n]}</span></td>
-        <td>${c.periodo ? c.periodo.toPrecision(4) : '—'}</td><td>${error === null ? '—' : error.toPrecision(3)}</td></tr>`;
-    }).join('');
-    const estable = this.r.eje !== 1;
-    this.$('#lateral-invariantes').innerHTML = `
-      <div class="rotulo">Mean period · upward crossings</div>
-      <table class="tabla"><thead><tr><th>Scheme</th><th>P (s)</th><th>ΔP/P (%)</th></tr></thead><tbody>${filas}</tbody></table>
-      <div class="dato-grande"><span class="rotulo">Theory</span><b class="mono">P = ${P && isFinite(P) ? P.toPrecision(4) : '∞'} s</b></div>
-      <p class="nota${apoyo.referencia_aviso ? ' aviso' : ''}">Reference: RK4 with Δt/4 (approximate)${apoyo.referencia_aviso ? ' · truncated' : ''}. — means no complete cycles.</p>
-      <p class="nota">${estable ? 'Stable spin: the transverse motion is a small ellipse. Compare amplitude and phase.'
-        : 'Intermediate axis: the perturbation grows like e<sup>λt</sup> (physics) while the schemes add their own error.'}</p>`;
+    const fila = (n, celdas) => `<tr class="${n === elegido ? 'elegido' : ''}"><td><span class="metodo" style="--c:${colorMetodo(n)}"><i></i>${cortos[n]}</span></td>
+        ${celdas.map(v => `<td>${v}</td>`).join('')}</tr>`;
+    const aviso = `<p class="nota${apoyo.referencia_aviso ? ' aviso' : ''}">Reference: RK4 with Δt/4 (approximate)${apoyo.referencia_aviso ? ' · truncated' : ''}.</p>`;
+    if (estable) {
+      // Giro estable: periodo medio de la componente transversal (cruces ascendentes por cero).
+      const filas = curvas.map(([n, c]) => {
+        const error = P && isFinite(P) && c.periodo ? 100*(c.periodo/P - 1) : null;
+        return fila(n, [c.periodo ? c.periodo.toPrecision(4) : '—', error === null ? '—' : error.toPrecision(3)]);
+      }).join('');
+      this.$('#lateral-invariantes').innerHTML = `
+        <div class="rotulo">Mean period · upward crossings</div>
+        <table class="tabla"><thead><tr><th>Scheme</th><th>P (s)</th><th>ΔP/P (%)</th></tr></thead><tbody>${filas}</tbody></table>
+        <div class="dato-grande"><span class="rotulo">Theory</span><b class="mono">P = ${P && isFinite(P) ? P.toPrecision(4) : '∞'} s</b></div>
+        ${aviso}<p class="nota">— means no complete cycle. Stable spin: the transverse motion is a small ellipse. Compare amplitude and phase.</p>`;
+    } else {
+      // Eje intermedio: cuándo vuelca cada esquema y cada cuánto, frente a P/2.
+      const mitad = P && isFinite(P) ? P/2 : null;
+      const filas = metodos.map(n => {
+        const v = this.datos.volteos_metodos[n] ?? [];
+        const intervalo = v.length >= 2 ? (v.at(-1) - v[0])/(v.length - 1) : null;
+        const error = intervalo !== null && mitad ? 100*(intervalo/mitad - 1) : null;
+        return fila(n, [v.length ? v[0].toFixed(2) : '—', intervalo === null ? '—' : intervalo.toFixed(2), error === null ? '—' : exp(error)]);
+      }).join('');
+      this.$('#lateral-invariantes').innerHTML = `
+        <div class="rotulo">Flips per scheme</div>
+        <table class="tabla"><thead><tr><th>Scheme</th><th>1st (s)</th><th>Interval (s)</th><th>vs P/2 (%)</th></tr></thead><tbody>${filas}</tbody></table>
+        <div class="dato-grande"><span class="rotulo">Theory</span><b class="mono">P/2 = ${mitad ? mitad.toPrecision(4) : '∞'} s</b></div>
+        ${aviso}<p class="nota">— means fewer than two flips before t<sub>f</sub>. Intermediate axis: the perturbation grows like e<sup>λt</sup> (physics) while the schemes add their own error.</p>`;
+    }
     this.$('#contexto-invariantes').textContent = (estable ? 'Stable spin: compare amplitude and phase' : 'Intermediate axis: physical growth and numerical error coexist')
       + ' · axes follow the reference';
   }
