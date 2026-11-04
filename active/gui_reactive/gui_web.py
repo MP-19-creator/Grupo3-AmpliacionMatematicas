@@ -69,6 +69,7 @@ traducciones = [
     (r"Residuo no finito", "Newton: non-finite residual"),
     (r"Jacobiana singular", "Newton: singular Jacobian"),
     (r"Limite de iteraciones de Newton", "Newton: iteration limit reached"),
+    (r"Euler implícito", "Implicit Euler"),
 ]
 puerto_inicial = int(os.environ.get("ORBITA_PUERTO", 8765))
 
@@ -225,7 +226,7 @@ def preparar_envio(datos):
     tn, _ = datos.pop('solucion_completa')
     datos['pasos'] = len(tn) - 1
     for clave in ('puntas_estela', 'comparacion_metodos', 'apoyo_comparacion', 'estabilidad', 'estudio_error',
-                  'fantasmas', 'volteos_metodos'):
+                  'fantasmas'):
         datos.pop(clave, None)
     datos['avisos'] = [traducir(aviso) for aviso in datos['avisos']]
     datos['aviso'] = traducir(datos['aviso'])
@@ -240,9 +241,7 @@ def preparar_envio_pagina(datos):
         for nombre, r in datos['comparacion_metodos'].items():
             indices = muestras(len(r['t']))
             t = r['t']
-            # Paso usado en cada muestra: el que llega a ese instante (la primera muestra no tiene).
             comparacion[nombre] = dict(t=t[indices], derivas=[d[indices] for d in r['derivas']],
-                                       paso=(t[1:] - t[:-1])[indices[1:] - 1] if len(t) > 1 else t[:0],
                                        maximos=[float(d.max()) for d in r['derivas']], pasos=len(t) - 1,
                                        aviso=traducir(r['aviso']))
         datos['comparacion_metodos'] = comparacion

@@ -8,7 +8,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 export const tiposCuerpo = {
   caja: { nombre: 'Box', nota: 'Exact proportions of I₁, I₂, I₃' },
-  tuerca: { nombre: 'T-handle', nota: 'Illustrative · Dzhanibekov' },
+  tuerca: { nombre: 'T-handle', nota: 'Illustrative · stem along e₂ (Dzhanibekov)' },
   raqueta: { nombre: 'Racket', nota: 'Illustrative · tennis racket' },
   satelite: { nombre: 'Satellite', nota: 'Illustrative · panels along e₁' },
 };
@@ -106,19 +106,20 @@ function caja(grupo, m, [a, b, c]) {
 }
 
 function tuerca(grupo, m) {
-  // Vástago a lo largo de e1 y travesaño a lo largo de e2: e3, normal al plano de la T, es el eje mayor.
-  const vastago = new THREE.Mesh(new THREE.CapsuleGeometry(.055, .95, 8, 28), m.titanio);
-  vastago.rotation.z = -Math.PI/2;
-  vastago.position.x = -.05;
-  const travesano = new THREE.Mesh(new THREE.CapsuleGeometry(.07, .62, 8, 28), m.grafito);
-  travesano.position.x = .5;
+  // Como la tuerca de Dzhanibekov: el vástago es el eje intermedio (e2) y el travesaño, largo y pesado, va a lo
+  // largo de e1, el menor. e3, normal al plano de la T, es el mayor. Con estas medidas la propia T cumple
+  // I1 < I2 < I3 (1 : 1,5 : 2,5), así que el volteo que se ve es el que haría el objeto real.
+  const travesano = new THREE.Mesh(new THREE.CapsuleGeometry(.07, .9, 8, 28), m.grafito);
+  travesano.rotation.z = Math.PI/2;
+  travesano.position.y = .36;
   const union = new THREE.Mesh(new THREE.SphereGeometry(.1, 32, 20), m.titanio);
-  union.position.x = .5;
-  const anillo = new THREE.Mesh(new THREE.TorusGeometry(.064, .012, 12, 40), m.acento);
-  anillo.rotation.y = Math.PI/2; anillo.position.x = -.42;
+  union.position.y = .36;
+  const vastago = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .66, 8, 28), m.titanio);
+  const anillo = new THREE.Mesh(new THREE.TorusGeometry(.058, .012, 12, 40), m.acento);
+  anillo.rotation.x = Math.PI/2; anillo.position.y = -.3;
   const pieza = new THREE.Group();
-  pieza.add(vastago, travesano, union, anillo);
-  pieza.position.x = -.21;                                  // centro de masas aproximado en el origen
+  pieza.add(travesano, union, vastago, anillo);
+  pieza.position.y = -.27;                                  // centro de masas aproximado en el origen
   grupo.add(pieza);
 }
 

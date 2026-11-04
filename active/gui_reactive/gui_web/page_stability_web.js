@@ -4,10 +4,12 @@
 // test dU/dt = λU. Un esquema multiplica ese modo por R(z), z = λΔt, en CADA paso: basta con mirar
 // dónde caen los puntos z = λΔt respecto de la región |R(z)| ≤ 1.
 //   ×  dinámica en el equilibrio  ·  ◆ cinemática del cuaternión  ·  ● J(ω(t)) en el instante actual
-import { layoutBase, dibujarGrafica, linea, Capa, colorMetodo, css, tarjetaGrafica, nombreIngles } from './graficas_web.js';
+import { layoutBase, dibujarGrafica, linea, Capa, colorMetodo, css, tarjetaGrafica, nombreIngles, exp } from './graficas_web.js';
 
-const metodos = ['Euler', 'Crank-Nicolson', 'RK4'];
-const traducciones = [['Equilibrio', 'Equilibrium'], ['Cuaternión', 'Quaternion'], ['Predicción', 'Prediction'], ['Simulación', 'Simulation']];
+const metodos = ['Euler', 'Euler implícito', 'Crank-Nicolson', 'RK4'];
+// Planos complejos con la misma escala en Re z e Im z: la región de Euler es un círculo, no una elipse.
+// Se encoge el recuadro de la gráfica (domain) en vez de alargar un rango, para no salirse de la malla calculada.
+const escalaIgual = { scaleanchor: 'x', scaleratio: 1, constrain: 'domain' };
 
 function conAlfa(hex, a) {
   const c = hex.replace('#', ''), n = parseInt(c.length === 3 ? c.replace(/./g, '$&$&') : c, 16);
@@ -37,7 +39,6 @@ export class PaginaEstabilidad {
       <div class="cuerpo-graficas regiones" id="graficas-regiones">
         ${tarjetaGrafica('<b>Regions</b> · |R(z)| ≤ 1', 'g-regiones')}
         ${tarjetaGrafica('<b>Close-up</b> · log|R(z)| − Re z', 'g-detalle', '<span class="leyenda-mapa"><i class="rojo"></i>amplifies <i class="azul"></i>damps</span>')}
-        ${tarjetaGrafica('<b>Amplification on the imaginary axis</b> · |R(iy)|', 'g-amplificacion')}
       </div>
       <div class="cuerpo-graficas trayectorias oculto" id="graficas-modo">
         ${tarjetaGrafica('<b>Oscillatory test mode</b> · u<sub>n</sub> in the complex plane', 'g-espiral')}
@@ -53,7 +54,7 @@ export class PaginaEstabilidad {
       if (this.datos) this.dibujarVista(); else this.actualizarBotones();
     });
     this.capas = {};
-    for (const id of ['g-regiones', 'g-detalle', 'g-amplificacion', 'g-espiral', 'g-ganancia', 'g-desfase'])
+    for (const id of ['g-regiones', 'g-detalle', 'g-espiral', 'g-ganancia', 'g-desfase'])
       this.capas[id] = new Capa(this.$(`#${id}`));
     this.actualizarBotones();
   }
@@ -94,7 +95,7 @@ export class PaginaEstabilidad {
         colorscale: [[0, conAlfa(colorMetodo(elegido), .16)], [1, conAlfa(colorMetodo(elegido), .16)]], showscale: false,
         hoverinfo: 'skip', zsmooth: false, showlegend: false });
     }
-    // Contorno |R| = 1 de los tres métodos.
+    // Contorno |R| = 1 de los cuatro métodos.
     for (const n of metodos) {
       const r = regiones[n], c = colorMetodo(n), sel = n === elegido;
       trazas.push({ type: 'contour', x: r.x, y: r.y, z: r.z, showscale: false, hoverinfo: 'skip', name: nombreIngles[n], showlegend: true,
@@ -116,35 +117,47 @@ export class PaginaEstabilidad {
     const d = this.datos, r = d.radio;
     const ejes = { zeroline: true, zerolinecolor: css('tenue'), zerolinewidth: 1 };
     dibujarGrafica(this.$('#g-regiones'), [...this.trazasRegiones(d.regiones_completas, true), ...this.trazasAutovalores()],
-      layoutBase({ x: { range: [-3.4, 1.4], title: { text: 'Re z' }, ...ejes }, y: { range: [-3.2, 3.2], title: { text: 'Im z' }, ...ejes },
-        leyenda: true, hovermode: 'closest', legend: { orientation: 'v', x: .01, y: .01, xanchor: 'left', yanchor: 'bottom',
-          bgcolor: conAlfa(css('panel-solido'), .8), font: { size: 10, color: css('texto-2') } } }));
+      layoutBase({ x: { range: [-3.4, 2.4], title: { text: 'Re z' }, ...ejes, constrain: 'domain' }, y: { range: [-3.2, 3.2], title: { text: 'Im z' }, ...ejes, ...escalaIgual },
+        // Leyenda en la franja libre de encima: con la escala igual, el recuadro de la gráfica no llena la tarjeta.
+        leyenda: true, hovermode: 'closest', legend: { orientation: 'h', x: .5, y: 1, xanchor: 'center', yanchor: 'top',
+          font: { size: 10, color: css('texto-2') } } }));
     const G = d.color_ampliacion;
     let m = 1e-12;
     for (const fila of G.z) for (const v of fila) if (v !== null) m = Math.max(m, Math.abs(v));
     const mapa = { type: 'heatmap', x: G.x, y: G.y, z: G.z, zmin: -m, zmax: m, zmid: 0, showscale: false, hoverinfo: 'skip', opacity: .9,
       colorscale: [[0, '#2b6cff'], [.5, 'rgba(0,0,0,0)'], [1, '#ff3d5e']] };
     dibujarGrafica(this.$('#g-detalle'), [mapa, ...this.trazasRegiones(d.regiones_ampliadas, false), ...this.trazasAutovalores()],
-      layoutBase({ x: { range: [-r, r], title: { text: 'Re z' }, ...ejes }, y: { range: [-r, r], title: { text: 'Im z' }, ...ejes }, hovermode: 'closest' }));
+      layoutBase({ x: { range: [-r, r], title: { text: 'Re z' }, ...ejes, constrain: 'domain' }, y: { range: [-r, r], title: { text: 'Im z' }, ...ejes, ...escalaIgual }, hovermode: 'closest' }));
 
-    const [zw, zq] = d.autovalores_iniciales;
-    const marcas = [[Math.abs(zw.im[0]), css(`e${this.r.eje + 1}`)], [Math.abs(zq.im[0]), css('momento')]].filter(([y]) => y > 0);
-    dibujarGrafica(this.$('#g-amplificacion'), metodos.map(n => linea(n, d.eje_imaginario, d.curvas_eje_imaginario[n], { seleccionado: n === this.r.nombre_metodo })),
-      layoutBase({ x: { range: [0, 3.2], title: { text: 'y' } }, y: { range: [.6, 1.8], title: { text: '|R(iy)|' } }, leyenda: true,
-        shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 1, y1: 1, line: { color: css('tenue'), width: 1, dash: 'dot' } },
-          ...marcas.map(([y, c]) => ({ type: 'line', yref: 'paper', y0: 0, y1: 1, x0: y, x1: y, line: { color: c, width: 1.3, dash: 'dash' } }))] }));
-
-    let tabla = d.tabla;
-    for (const [es, en] of traducciones) tabla = tabla.replaceAll(es, en);
+    const [zw] = d.autovalores_iniciales;
     const real = Math.abs(zw.im[0]) < 1e-14;
     this.$('#lateral-estabilidad').innerHTML = `
       <div class="rotulo">Prediction vs simulation</div>
-      <div class="pre-tabla">${tabla.replaceAll('▶', '<b class="marca-elegido">▶</b>')}</div>
+      ${this.tablaPrediccion(d.prediccion)}
       <p class="nota"><b style="color:var(--e${this.r.eje + 1})">×</b> equilibrium eigenvalues λΔt (${real ? 'real: saddle' : 'imaginary: centre'})<br>
         <b style="color:var(--momento)">◆</b> quaternion kinematics ±i|ω|Δt/2 (explains the drift of |q|)<br>
         <b style="color:var(--punto)">●</b> eigenvalues of J(ω(t))·Δt now: they move with the animation</p>
       <p class="nota" id="nota-previa"></p>`;
     this.$('#contexto-estabilidad').textContent = 'Each step multiplies every mode by R(λΔt): |R| > 1 grows, |R| = 1 is kept, |R| < 1 is damped';
+  }
+
+  // Tabla de predicción: |R(z)| frente a |e^z| en el equilibrio y |q(t_f)| − 1 predicho frente al simulado.
+  tablaPrediccion({ z, filas }) {
+    const elegido = this.r.nombre_metodo, cifras = (v) => v === null ? '—' : v.toFixed(6);
+    const textoZ = Math.abs(z.im) < 1e-14 ? z.re.toPrecision(3) : `${z.re.toPrecision(3)} ${z.im < 0 ? '−' : '+'} ${Math.abs(z.im).toPrecision(3)}i`;
+    const fila = (f, a, b) => `<tr class="${f.nombre === elegido ? 'elegido' : ''}">
+      <td><span class="metodo" style="--c:${colorMetodo(f.nombre)}"><i></i>${nombreIngles[f.nombre]}</span></td><td>${a}</td><td>${b}</td></tr>`;
+    return `
+      <table class="tabla">
+        <caption>Equilibrium · z = λΔt = ${textoZ}</caption>
+        <thead><tr><th></th><th>|R(z)|</th><th>|e<sup>z</sup>|</th></tr></thead>
+        <tbody>${filas.map(f => fila(f, cifras(f.R), cifras(f.exacta))).join('')}</tbody>
+      </table>
+      <table class="tabla">
+        <caption>Quaternion · |q(t<sub>f</sub>)| − 1</caption>
+        <thead><tr><th></th><th>Prediction</th><th>Simulation</th></tr></thead>
+        <tbody>${filas.map(f => fila(f, exp(f.prediccion, 2), exp(f.simulacion, 2))).join('')}</tbody>
+      </table>`;
   }
 
   // ------------------------------------------------------------ modo oscilatorio test u' = iσu
@@ -190,12 +203,8 @@ export class PaginaEstabilidad {
       return;
     }
     const z = this.datos.autovalores_por_instante;
-    let maximo = 0;
-    for (let k = 0; k < z.re[indice].length; k++) {
+    for (let k = 0; k < z.re[indice].length; k++)
       for (const id of ['g-regiones', 'g-detalle']) this.capas[id].punto(`z${k}`, z.re[indice][k], z.im[indice][k], { color: css('punto'), tam: 9 });
-      maximo = Math.max(maximo, Math.abs(z.im[indice][k]));
-    }
-    this.capas['g-amplificacion'].vertical('cursor', maximo, { color: css('punto') });
     this.vistaPrevia();
   }
 

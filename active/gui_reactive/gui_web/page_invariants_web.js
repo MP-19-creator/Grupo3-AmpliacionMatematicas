@@ -1,12 +1,12 @@
 // Página 2 · INVARIANTES (versión web de page_invariants.py; enunciado 3.2: conmutar integradores y
 // contrastar la deriva de energía y momento).
-// Los tres esquemas integran EXACTAMENTE el mismo problema con el mismo Δt (o la misma tolerancia).
-// La física dice que 2T, L² y |q| no cambian: todo lo que se ve aquí es error numérico.
-import { layoutBase, dibujarGrafica, linea, Capa, colorMetodo, css, simlog, marcasSimlog, exp, tarjetaGrafica, nombreIngles } from './graficas_web.js';
+// Los cuatro esquemas integran EXACTAMENTE el mismo problema con el mismo Δt (o la misma tolerancia).
+// La física dice que 2T y L² no cambian: todo lo que se ve aquí es error numérico.
+import { layoutBase, dibujarGrafica, linea, Capa, colorMetodo, css, simlog, marcasSimlog, tarjetaGrafica } from './graficas_web.js';
 
 const suelo = 1e-17;                         // suelo para el logaritmo de derivas nulas
-const metodos = ['Euler', 'Crank-Nicolson', 'RK4'];
-const cortos = { 'Euler': 'Euler', 'Crank-Nicolson': 'CN', 'RK4': 'RK4', 'Referencia RK4': 'Ref. RK4' };
+const metodos = ['Euler', 'Euler implícito', 'Crank-Nicolson', 'RK4'];
+const cortos = { 'Euler': 'Euler', 'Euler implícito': 'Impl. Euler', 'Crank-Nicolson': 'CN', 'RK4': 'RK4', 'Referencia RK4': 'Ref. RK4' };
 
 export class PaginaConservacion {
   titulo = '2  Invariants';
@@ -25,32 +25,29 @@ export class PaginaConservacion {
 
   construirDOM() {
     this.contenedor.innerHTML = `
-    <div class="pagina-graficas">
+    <div class="pagina-graficas sin-lateral">
       <div class="barra-pagina">
         <div class="segmentado mini" id="vista-invariantes"><button data-vista="derivas">Drifts</button><button data-vista="trayectorias">Trajectories</button></div>
         <button class="chip" id="chip-signo">Signed</button>
         <button class="chip oculto" id="chip-detalle">Zoom on time</button>
         <span class="contexto" id="contexto-invariantes"></span>
       </div>
-      <div class="cuerpo-graficas" id="graficas-derivas">
+      <div class="cuerpo-graficas derivas" id="graficas-derivas">
         ${tarjetaGrafica('<b>Kinetic energy</b> · |2T/2T<sub>0</sub> − 1|', 'g-energia')}
         ${tarjetaGrafica('<b>Angular momentum</b> · |L²/L²<sub>0</sub> − 1|', 'g-momento')}
-        ${tarjetaGrafica('<b>Quaternion norm</b> · ||q| − 1|', 'g-norma')}
-        ${tarjetaGrafica('<b>Time step used</b> · Δt(t)', 'g-paso')}
       </div>
       <div class="cuerpo-graficas trayectorias oculto" id="graficas-trayectorias">
         ${tarjetaGrafica('<b>Transverse projection</b> · body frame', 'g-proyeccion')}
         ${tarjetaGrafica('<b>Transverse component</b> · phase', 'g-fase')}
         ${tarjetaGrafica('<b>Transverse perturbation</b> · norm', 'g-perturbacion')}
       </div>
-      <aside class="tarjeta lateral" id="lateral-invariantes"></aside>
-      <div class="cargando" id="cargando-invariantes"><span>Integrating Euler, Crank–Nicolson and RK4…</span></div>
+      <div class="cargando" id="cargando-invariantes"><span>Integrating Euler, implicit Euler, Crank–Nicolson and RK4…</span></div>
     </div>`;
     this.$('#vista-invariantes').addEventListener('click', e => e.target.dataset.vista && this.cambiarVista(e.target.dataset.vista));
     this.$('#chip-signo').addEventListener('click', () => { this.conSigno = !this.conSigno; this.redibujar(); });
     this.$('#chip-detalle').addEventListener('click', () => { this.detalle = !this.detalle; this.redibujar(); });
     this.capas = {};
-    for (const id of ['g-energia', 'g-momento', 'g-norma', 'g-paso', 'g-proyeccion', 'g-fase', 'g-perturbacion'])
+    for (const id of ['g-energia', 'g-momento', 'g-proyeccion', 'g-fase', 'g-perturbacion'])
       this.capas[id] = new Capa(this.$(`#${id}`));
     this.actualizarBotones();
   }
@@ -86,11 +83,11 @@ export class PaginaConservacion {
     this.dibujarInstante(this.estado.indice, this.estado.fraccion, this.estado.tiempo);
   }
 
-  // ------------------------------------------------------------ derivas de 2T, L² y |q|
+  // ------------------------------------------------------------ derivas de 2T y L²
   dibujarDerivas() {
     const { comparacion_metodos: comparacion, apoyo_comparacion: apoyo } = this.datos;
     const elegido = this.r.nombre_metodo, tf = this.r.t.at(-1);
-    const ids = ['g-energia', 'g-momento', 'g-norma'];
+    const ids = ['g-energia', 'g-momento'];
     ids.forEach((id, j) => {
       let trazas, y;
       if (this.conSigno) {
@@ -109,45 +106,17 @@ export class PaginaConservacion {
         });
         y = { type: 'log', range: [-17, 1], tickvals: [1e-16, 1e-12, 1e-8, 1e-4, 1], title: { text: 'relative drift' } };
       }
-      dibujarGrafica(this.$(`#${id}`), trazas, layoutBase({ x: { range: [0, tf], title: { text: j === 2 ? 't (s)' : '' } }, y,
-        leyenda: j === 0, margen: { b: j === 2 ? 36 : 22 } }));
+      const ultima = j === ids.length - 1;
+      dibujarGrafica(this.$(`#${id}`), trazas, layoutBase({ x: { range: [0, tf], title: { text: ultima ? 't (s)' : '' } }, y,
+        leyenda: j === 0, margen: { b: ultima ? 36 : 22 } }));
     });
-    // Paso usado: constante con paso fijo; con paso adaptativo se ve cómo lo ajusta cada método.
-    let lo = Infinity, hi = 0;
-    const trazas = metodos.map(n => {
-      const c = comparacion[n];
-      for (const h of c.paso) if (h > 0) { lo = Math.min(lo, h); hi = Math.max(hi, h); }
-      return linea(n, c.t.slice(1), c.paso, { seleccionado: n === elegido });
-    });
-    const constante = hi / lo < 1 + 1e-8;
-    dibujarGrafica(this.$('#g-paso'), trazas, layoutBase({ x: { range: [0, tf], title: { text: 't (s)' } },
-      y: { type: 'log', range: [Math.log10(lo/3), Math.log10(hi*3)], title: { text: 'Δt (s)' }, ...(constante ? { tickvals: [lo], ticktext: [lo.toPrecision(3)] } : {}) } }));
 
-    // Con paso adaptativo cada esquema elige su Δt para la misma tolerancia: el número de pasos pasa a ser el dato clave.
-    const adaptativo = this.r.adaptativo, destacada = adaptativo ? ' class="destacada"' : '';
-    const filas = metodos.map(n => {
-      const c = comparacion[n];
-      return `<tr class="${n === elegido ? 'elegido' : ''}"><td><span class="metodo" style="--c:${colorMetodo(n)}"><i></i>${cortos[n]}</span></td>
-        ${c.maximos.map(v => `<td>${exp(v)}</td>`).join('')}<td${destacada}>${c.pasos >= 1e4 ? `${Math.round(c.pasos/1e3)}k` : c.pasos >= 1e3 ? `${(c.pasos/1e3).toFixed(1)}k` : c.pasos}</td></tr>`;
-    }).join('');
+    // Sin panel lateral: el único dato que no se ve en las gráficas (un esquema truncado) va a la línea de contexto.
     const truncados = metodos.filter(n => comparacion[n].aviso);
-    this.$('#lateral-invariantes').innerHTML = `
-      <div class="rotulo">Max drift · |·|</div>
-      <table class="tabla"><thead><tr><th>Scheme</th><th>2T</th><th>L²</th><th>|q|</th><th${destacada}>N</th></tr></thead><tbody>${filas}</tbody></table>
-      <p class="nota">2T, L² and |q| are exact invariants of the rigid body: <b>every curve on this page is numerical error</b>.</p>
-      <div class="dato-grande"><span class="rotulo">${adaptativo ? 'Adaptive step' : 'Fixed step'}</span>
-        <b class="mono">${adaptativo ? `tol ${this.r.tol.toExponential(0)}` : `Δt = ${this.ctx.formatoNumero(this.r.dt_utilizado)} s`}</b></div>
-      ${truncados.length ? `<p class="nota aviso">Truncated: ${truncados.map(n => `${cortos[n]} (${comparacion[n].aviso})`).join(' · ')}</p>` : ''}
-      ${adaptativo ? `<p class="nota">Same tolerance for the three schemes: each one chooses its own Δt. Compare the error <b>and the number of steps N</b>.</p>
-      <p class="nota"><b style="color:var(--euler)">Euler</b> (order 1): by far the most steps to meet the tolerance.<br>
-        <b style="color:var(--cn)">Crank–Nicolson</b> (order 2): |R(iy)| = 1, the invariants oscillate without accumulating.<br>
-        <b style="color:var(--rk4)">RK4</b> (order 4): the fewest steps for the same tolerance.</p>`
-      : `<p class="nota"><b style="color:var(--euler)">Euler</b> (order 1): the drift accumulates, as |R(iy)| &gt; 1 predicts.<br>
-        <b style="color:var(--cn)">Crank–Nicolson</b> (order 2): it oscillates without accumulating (|R(iy)| = 1).<br>
-        <b style="color:var(--rk4)">RK4</b> (order 4): the smallest error at the same Δt.</p>`}`;
-    this.$('#contexto-invariantes').textContent = this.conSigno ? 'Signed: positive grows, negative shrinks · symmetric log scale'
-      : adaptativo ? 'Same problem, same tolerance · compare the error and the steps each scheme needs'
-      : 'Same problem, same parameters · compare the size of the numerical error';
+    this.$('#contexto-invariantes').textContent = (this.conSigno ? 'Signed: positive grows, negative shrinks · symmetric log scale'
+      : this.r.adaptativo ? 'Same problem, same tolerance · compare the error and the steps each scheme needs'
+      : 'Same problem, same parameters · compare the size of the numerical error')
+      + (truncados.length ? ` · Truncated: ${truncados.map(n => `${cortos[n]} (${comparacion[n].aviso})`).join(' · ')}` : '');
   }
 
   // ------------------------------------------------------------ trayectorias transversales
@@ -182,44 +151,15 @@ export class PaginaConservacion {
     dibujarGrafica(this.$('#g-perturbacion'), trazas, layoutBase({ x: { range: rango, title: { text: 't (s)' } },
       y: { type: 'log', title: { text: 'norm (rad/s)' }, dtick: 1 }, leyenda: tg.length > 1 }));
 
-    const fila = (n, celdas) => `<tr class="${n === elegido ? 'elegido' : ''}"><td><span class="metodo" style="--c:${colorMetodo(n)}"><i></i>${cortos[n]}</span></td>
-        ${celdas.map(v => `<td>${v}</td>`).join('')}</tr>`;
-    const aviso = `<p class="nota${apoyo.referencia_aviso ? ' aviso' : ''}">Reference: RK4 with Δt/4 (approximate)${apoyo.referencia_aviso ? ' · truncated' : ''}.</p>`;
-    if (estable) {
-      // Giro estable: periodo medio de la componente transversal (cruces ascendentes por cero).
-      const filas = curvas.map(([n, c]) => {
-        const error = P && isFinite(P) && c.periodo ? 100*(c.periodo/P - 1) : null;
-        return fila(n, [c.periodo ? c.periodo.toPrecision(4) : '—', error === null ? '—' : error.toPrecision(3)]);
-      }).join('');
-      this.$('#lateral-invariantes').innerHTML = `
-        <div class="rotulo">Mean period · upward crossings</div>
-        <table class="tabla"><thead><tr><th>Scheme</th><th>P (s)</th><th>ΔP/P (%)</th></tr></thead><tbody>${filas}</tbody></table>
-        <div class="dato-grande"><span class="rotulo">Theory</span><b class="mono">P = ${P && isFinite(P) ? P.toPrecision(4) : '∞'} s</b></div>
-        ${aviso}<p class="nota">— means no complete cycle. Stable spin: the transverse motion is a small ellipse. Compare amplitude and phase.</p>`;
-    } else {
-      // Eje intermedio: cuándo vuelca cada esquema y cada cuánto, frente a P/2.
-      const mitad = P && isFinite(P) ? P/2 : null;
-      const filas = metodos.map(n => {
-        const v = this.datos.volteos_metodos[n] ?? [];
-        const intervalo = v.length >= 2 ? (v.at(-1) - v[0])/(v.length - 1) : null;
-        const error = intervalo !== null && mitad ? 100*(intervalo/mitad - 1) : null;
-        return fila(n, [v.length ? v[0].toFixed(2) : '—', intervalo === null ? '—' : intervalo.toFixed(2), error === null ? '—' : exp(error)]);
-      }).join('');
-      this.$('#lateral-invariantes').innerHTML = `
-        <div class="rotulo">Flips per scheme</div>
-        <table class="tabla"><thead><tr><th>Scheme</th><th>1st (s)</th><th>Interval (s)</th><th>vs P/2 (%)</th></tr></thead><tbody>${filas}</tbody></table>
-        <div class="dato-grande"><span class="rotulo">Theory</span><b class="mono">P/2 = ${mitad ? mitad.toPrecision(4) : '∞'} s</b></div>
-        ${aviso}<p class="nota">— means fewer than two flips before t<sub>f</sub>. Intermediate axis: the perturbation grows like e<sup>λt</sup> (physics) while the schemes add their own error.</p>`;
-    }
     this.$('#contexto-invariantes').textContent = (estable ? 'Stable spin: compare amplitude and phase' : 'Intermediate axis: physical growth and numerical error coexist')
-      + ' · axes follow the reference';
+      + ' · axes follow the reference (RK4, Δt/4)' + (apoyo.referencia_aviso ? ' · reference truncated' : '');
   }
 
   // ------------------------------------------------------------ animación
   dibujarInstante(indice, fraccion, tiempo) {
     if (!this.datos) return;
     if (this.vista === 'derivas') {
-      for (const id of ['g-energia', 'g-momento', 'g-norma', 'g-paso']) this.capas[id].vertical('t', tiempo);
+      for (const id of ['g-energia', 'g-momento']) this.capas[id].vertical('t', tiempo);
       return;
     }
     // Con el detalle activo, la ventana sigue al instante actual.

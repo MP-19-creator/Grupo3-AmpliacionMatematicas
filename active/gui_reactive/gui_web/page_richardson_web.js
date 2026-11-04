@@ -3,7 +3,7 @@
 // No conocemos la solución exacta, pero sí cómo encoge el error de un esquema de orden q al partir
 // el paso por dos: E_N ~ C Δt^q. Integrando con N y con 2N pasos:
 //     U_N − U_2N = E_N − E_2N = E_N (1 − 2^−q)   →   E_N ≈ (U_N − U_2N) / (1 − 2^−q)
-import { layoutBase, dibujarGrafica, linea, colorMetodo, css, tarjetaGrafica, nombreIngles, exp } from './graficas_web.js';
+import { layoutBase, dibujarGrafica, linea, colorMetodo, css, tarjetaGrafica, nombreIngles, variableMetodo } from './graficas_web.js';
 
 export class PaginaPrecision {
   titulo = '4  Richardson & order';
@@ -20,7 +20,7 @@ export class PaginaPrecision {
   construirDOM() {
     const c = this.estado.configuracion.controles.tf_estudio;
     this.contenedor.innerHTML = `
-    <div class="pagina-graficas">
+    <div class="pagina-graficas sin-lateral">
       <div class="barra-pagina">
         <span class="rotulo">Study interval</span>
         <input type="range" id="tf-estudio" min="${c.minimo}" max="${c.maximo}" step="${c.paso}" value="${this.estado.tfEstudio}">
@@ -32,15 +32,22 @@ export class PaginaPrecision {
         ${tarjetaGrafica('<b>Convergence</b> · slope = −order', 'g-convergencia')}
         ${tarjetaGrafica('<b>Error along the trajectory</b> · Richardson vs reference', 'g-error')}
         <div class="tarjeta explicacion">
-          <div class="rotulo">How the error is estimated without the exact solution</div>
-          <div class="formula-grande"><span>E<sub>N</sub> ≈</span><span class="fraccion"><span>U<sub>N</sub> − U<sub>2N</sub></span><span>1 − 2<sup>−q</sup></span></span></div>
-          <p class="nota">A scheme of order q makes the error shrink like Δt<sup>q</sup>. Halving the step divides the difference
-            D = |U<sub>N</sub>(t<sub>f</sub>) − U<sub>2N</sub>(t<sub>f</sub>)| by 2<sup>q</sup>:
-            <b style="color:var(--euler)">2</b> for Euler, <b style="color:var(--cn)">4</b> for Crank–Nicolson,
-            <b style="color:var(--rk4)">16</b> for RK4. On a log–log plot that is a straight line of slope −q.</p>
+          <div class="rotulo"><b>Richardson extrapolation</b> · no exact solution needed</div>
+          <div class="formula-richardson">
+            <div class="fila-formula">
+              <div class="ecuacion"><span>E<sub>N</sub></span><span class="op">≈</span>
+                <span class="fraccion"><span>U<sub>N</sub> − U<sub>2N</sub></span><span>1 − 2<sup>−q</sup></span></span></div>
+              <ul class="lectura">
+                <li><b>U<sub>N</sub>, U<sub>2N</sub></b>the same scheme with N and 2N steps</li>
+                <li><b>q</b>its order: the error shrinks like Δt<sup>q</sup></li>
+              </ul>
+            </div>
+            <p class="nota"><span class="definicion-compacta">U<sub>N</sub> and U<sub>2N</sub>: the same scheme with N and 2N steps; q is its order. </span>Each time N doubles, D = |U<sub>N</sub>(t<sub>f</sub>) − U<sub>2N</sub>(t<sub>f</sub>)| is divided by
+              2<sup>q</sup>: on the log–log plot every scheme falls on a straight line of slope −q.</p>
+          </div>
+          <div class="factores" id="factores-richardson"></div>
         </div>
       </div>
-      <aside class="tarjeta lateral" id="lateral-precision"></aside>
       <div class="cargando" id="cargando-precision"><span>Integrating with N, 2N, 4N… steps</span></div>
     </div>`;
     const control = this.$('#tf-estudio');
@@ -57,6 +64,20 @@ export class PaginaPrecision {
       this.estado.tfEstudio = +control.value;
       this.dibujar();
     });
+    this.pintarFactores();
+  }
+
+  // Una tarjeta por esquema: cuánto divide D cada vez que N se duplica (2^q) y el orden que mide el estudio.
+  pintarFactores() {
+    const ordenes = this.estado.configuracion.ordenes ?? {}, curvas = this.datos?.curvas_convergencia ?? {};
+    const elegido = this.r?.nombre_metodo ?? this.estado.resultado?.nombre_metodo;
+    this.$('#factores-richardson').innerHTML = Object.entries(ordenes).map(([n, q]) => {
+      const medido = curvas[n]?.pendiente;
+      return `<div class="factor${n === elegido ? ' elegido' : ''}" style="--c:var(--${variableMetodo[n]})">
+        <span class="nombre">${nombreIngles[n]}</span>
+        <span class="divisor">÷${2**q}</span>
+        <span class="medido">q = ${q} · fit <b>${medido === null || medido === undefined ? '—' : (-medido).toFixed(2)}</b></span></div>`;
+    }).join('');
   }
   mostrar() {}
   cambiarTema() { if (this.datos) this.dibujarGraficas(); }
@@ -114,20 +135,8 @@ export class PaginaPrecision {
         annotations: [{ text: 'The scheme diverges in this interval. Reduce Δt.', showarrow: false, font: { color: css('aviso'), size: 13 } }] }));
     }
 
-    const c = d.curvas_convergencia[elegido];
-    const medido = c.pendiente === null ? null : -c.pendiente;
-    const filas = c.N.map((n, i) => `<tr${i >= c.indices_ajuste[0] && i <= c.indices_ajuste.at(-1) ? ' class="ajuste"' : ''}>
-      <td>${n.toLocaleString('en')}</td><td>${(d.tf / n).toFixed(4)}</td><td>${exp(c.D[i], 2)}</td>
-      <td>${i < c.ordenes.length && c.ordenes[i] !== null ? c.ordenes[i].toFixed(2) : '—'}</td></tr>`).join('');
-    const acuerdo = medido !== null && Math.abs(medido - this.r.orden) < .25;
-    this.$('#lateral-precision').innerHTML = `
-      <div class="rotulo"><span style="color:${colorMetodo(elegido)}">${nombreIngles[elegido]}</span> · order of convergence</div>
-      <div class="ordenes">
-        <div><span class="rotulo">Theory</span><b class="mono">${this.r.orden}</b></div>
-        <div><span class="rotulo">Measured</span><b class="mono" style="color:${acuerdo ? 'var(--bien)' : 'var(--aviso)'}">${medido === null ? '—' : medido.toFixed(2)}</b></div>
-      </div>
-      <table class="tabla"><thead><tr><th>N</th><th>Δt</th><th>D</th><th>order</th></tr></thead><tbody>${filas}</tbody></table>
-      <p class="nota">Highlighted rows: straight stretch used for the fit. Local order = log<sub>2</sub>(D<sub>N</sub>/D<sub>2N</sub>).</p>`;
+    // Sin panel lateral: el orden medido de cada esquema ya figura en la leyenda de la gráfica de convergencia.
+    this.pintarFactores();
     this.resumen = `Study over [0, ${d.tf}] s · computed in ${d.tiempo_calculo.toFixed(2)} s`;
     this.$('#contexto-precision').textContent = this.resumen;
   }

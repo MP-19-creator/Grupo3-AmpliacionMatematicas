@@ -12,7 +12,7 @@ import {
 import { crearCuerpo, crearFantasma, tiposCuerpo } from './cuerpos_web.js';
 
 const nombresEje = ['I₁', 'I₂', 'I₃'];
-const variableMetodo = { 'Euler': 'euler', 'Crank-Nicolson': 'cn', 'RK4': 'rk4' };
+const variableMetodo = { 'Euler': 'euler', 'Euler implícito': 'implicito', 'Crank-Nicolson': 'cn', 'RK4': 'rk4' };
 const largoEjes = .86;
 const largoL = .96, largoOmega = .92;            // poco más que los ejes: no salen del visor en los giros estables
 const vistaCuerpo = [2.55, -3.2, 1.47];          // cámara del visor de actitud
@@ -58,7 +58,7 @@ export class PaginaMovimiento {
             <div class="fila-chips">
               <button class="chip" data-opcion="estelas">Trails</button>
               <button class="chip" data-opcion="vectores">L & ω</button>
-              <button class="chip" data-opcion="integradores">3 integrators<span class="tecla">C</span></button>
+              <button class="chip" data-opcion="integradores">All integrators<span class="tecla">C</span></button>
               <button class="chip grabar" id="boton-grabar" title="Record this view as a video (G)"><i></i><span class="texto">Record</span><span class="tecla">G</span></button>
             </div>
           </div>
@@ -71,7 +71,7 @@ export class PaginaMovimiento {
           <div class="nota-cuerpo" id="nota-cuerpo"></div>
         </div>
         <div class="destello" id="destello-actitud"></div>
-        <div class="cargando" id="cargando-actitud"><span>Integrating Euler, Crank–Nicolson and RK4…</span></div>
+        <div class="cargando" id="cargando-actitud"><span>Integrating Euler, implicit Euler, Crank–Nicolson and RK4…</span></div>
       </div>
 
       <div class="tarjeta visor" id="visor-fases">
@@ -93,7 +93,7 @@ export class PaginaMovimiento {
             <span style="color:var(--polhoda)"><i></i>Polhode</span>
           </div>
           <div class="leyenda oculto" id="leyenda-integradores">
-            <span style="color:var(--euler)"><i></i>Euler</span><span style="color:var(--cn)"><i></i>CN</span><span style="color:var(--rk4)"><i></i>RK4</span>
+            <span style="color:var(--euler)"><i></i>Euler</span><span style="color:var(--implicito)"><i></i>Impl. Euler</span><span style="color:var(--cn)"><i></i>CN</span><span style="color:var(--rk4)"><i></i>RK4</span>
           </div>
         </div>
         <div class="destello" id="destello-fases"></div>
@@ -449,7 +449,7 @@ export class PaginaMovimiento {
       b.style.setProperty('--ancho-total', `${b.parentElement.clientWidth}px`); b.style.width = `${100*b.dataset.ancho}%`; }));
   }
 
-  // ------------------------------------------------------------ tres integradores a la vez
+  // ------------------------------------------------------------ todos los integradores a la vez
   async cargarFantasmas() {
     this.$('#cargando-actitud').classList.add('visible');
     const datos = await this.ctx.pedirPagina(0);
@@ -463,7 +463,9 @@ export class PaginaMovimiento {
       const cuerpo = seleccionado ? null : crearFantasma(this.cuerpo, c);
       const flecha = crearFlecha(c, { radio: .007, punta: .05, emisivo: 2.2 });
       const etiqueta = crearEtiqueta(this.ctx.nombresCortos[nombre], 'pequena'); etiqueta.element.style.color = `var(--${variableMetodo[nombre]})`;
+      // Las etiquetas comparten punta y se apilan en pantalla: no se solapan aunque el eje apunte a la cámara.
       etiqueta.userData.orden = Object.keys(variableMetodo).indexOf(nombre);
+      Object.assign(etiqueta.element.style, { marginTop: `${1.25*etiqueta.userData.orden}em`, marginLeft: "4.6em", width: "8em", textAlign: "left", whiteSpace: "nowrap" });
       const grupo = new THREE.Group();
       if (cuerpo) grupo.add(cuerpo);
       grupo.add(flecha, etiqueta);
@@ -585,7 +587,7 @@ export class PaginaMovimiento {
       interpolarCuaternion(f.quats, indice, fraccion, f.grupo.quaternion);
       const e = [0, 0, 0]; e[r.eje] = 1;
       f.flecha.apuntar(e, .98);
-      f.etiqueta.position.set(...e.map(v => v*(1.1 + .13*f.etiqueta.userData.orden)));
+      f.etiqueta.position.set(...e.map(v => v*1.12));
       interpolarPunto(f.omega, indice, fraccion, f.punto.position);
     }
     // Volteos: contador, destello y pulso cuando el eje de giro cambia de sentido.

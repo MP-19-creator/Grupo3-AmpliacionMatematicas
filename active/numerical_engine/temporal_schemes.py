@@ -16,7 +16,9 @@ def Euler(U, dt, t, F):
 def Euler_implicit(U, dt, t, F):
     def G(X):
         return X - U - dt * F(X, t + dt)
-    return Newton(G, U)
+    def dG(X):                                       # dG/dX = Id - dt dF/dX  (Jacobiano exacto)
+        return eye(len(U)) - dt * F.jacobian(X, t + dt)
+    return Newton(G, Euler(U, dt, t, F), dG if hasattr(F, "jacobian") else None)
 
 # Runge-Kutta 4th order
 def RK4(U, dt, t, F):

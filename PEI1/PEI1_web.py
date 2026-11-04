@@ -4,21 +4,63 @@ Ejecutar desde la raiz: python PEI1/PEI1_web.py
 
 Los cálculos se importan de PEI1.py, no se copian: si se corrige algo allí, esta
 versión lo hereda. Aquí solo se añade lo que dibuja la GUI web y no la de
-matplotlib (construcción de Poinsot, familia de polhodas, los tres integradores
-a la vez). Borrar este fichero, gui_web.py y la carpeta gui_web/ deja la v1 intacta.
+matplotlib (construcción de Poinsot, familia de polhodas, todos los integradores
+a la vez) y el Euler implícito, que pasa por el mismo flujo que los tres esquemas
+del enunciado. Borrar este fichero, gui_web.py y la carpeta gui_web/ deja la v1 intacta.
 """
 import sys
 import os
+import time
+from inspect import signature
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from numpy import array, arcsin, clip, cos, diff, einsum, isfinite, linspace, nan, pi, searchsorted, sin, sqrt
-from numpy.linalg import norm
-from PEI1 import (metodos, metodos_implicitos, limite_pasos,calcular_trayectoria, comparar_metodos, preparar_apoyo_comparacion,
-    preparar_datos_estabilidad, calcular_estudio_error, integrar_trayectoria, instantes_cambio_signo)
+from numpy import (array, arcsin, clip, cos, diff, einsum, errstate, exp, eye, isfinite, linspace, log, nan, pi, prod,
+    searchsorted, sin, sqrt)
+from numpy.linalg import norm, solve, LinAlgError
+import PEI1 as principal
+from PEI1 import (metodos, metodos_implicitos, limite_pasos, Esquema_temporal, calcular_trayectoria, comparar_metodos,
+    preparar_apoyo_comparacion, preparar_datos_estabilidad, calcular_estudio_error, integrar_trayectoria, calcular_derivas)
 from active.gui_reactive.gui_web import crear_interfaz_web
+from active.numerical_engine.temporal_schemes import Euler, Euler_implicit
+from active.numerical_engine.NewtonRaphson import Newton, Newton_failed
+from active.numerical_engine.Estabilidad import stability_region, stability_function
+from active.numerical_engine.Errores_Convergencia import curva_convergencia, tramo_recto, ordenes_locales
 from active.space_physics.eje_intermedio import (Rigid_body_problem, Rotation_matrix, Kinetic_energy_2T,
     Angular_momentum_L2, Inertial_angular_momentum, Energy_ellipsoid, Momentum_ellipsoid, Separatrix,
-    Polhode_period)
+    Polhode_period, Initial_condition)
+
+
+def paso_euler_implicito(U, dt, t, F):
+    """Paso de Euler implícito con el Jacobiano exacto, igual que paso_crank_nicolson de PEI1.py.
+
+    Resuelve G(X) = X − U − Δt F(X, t + Δt) = 0 con Newton desde el predictor de Euler explícito.
+    Euler_implicit de temporal_schemes pasa el Jacobiano a Newton, que aún solo admite (F, U0):
+    cuando NewtonRaphson.py lo acepte, metodo_EI pasa a ser Euler_implicit sin tocar nada aquí.
+    """
+    X = Euler(U, dt, t, F)
+    for _ in range(25):
+        residuo = X - U - dt * F(X, t + dt)
+        if not isfinite(residuo).all():
+            raise Newton_failed("Residuo no finito")
+        if norm(residuo) <= 1e-10:
+            return X
+        try:
+            X = X - solve(eye(len(U)) - dt * F.jacobian(X, t + dt), residuo)
+        except LinAlgError as exc:
+            raise Newton_failed("Jacobiana singular") from exc
+    raise Newton_failed("Limite de iteraciones de Newton")
+
+
+paso_euler_implicito.__name__ = "Euler_implicit"
+metodo_EI = Euler_implicit if len(signature(Newton).parameters) >= 3 else paso_euler_implicito
+# Los tres esquemas de PEI1.py más el Euler implícito, en el orden de los botones (RK4 al final: es el inicial).
+metodos_web = {"Euler": metodos["Euler"], "Euler implícito": Esquema_temporal(metodo_EI, 1),
+               "Crank-Nicolson": metodos["Crank-Nicolson"], "RK4": metodos["RK4"]}
+metodos_extra = {nombre: metodo for nombre, metodo in metodos_web.items() if nombre not in metodos}
+nombres_estabilidad_web = {"Euler": "Euler", "Euler implícito": "Euler_implicit", "Crank-Nicolson": "Crank_Nicolson", "RK4": "RK4"}
+niveles_convergencia_web = {"Euler implícito": 8}             # como Crank-Nicolson: cada paso resuelve Newton
+# Es implícito: el mismo límite de pasos que Crank-Nicolson. Solo cambia en este proceso; PEI1.py no se toca.
+principal.metodos_implicitos = (*metodos_implicitos, metodos_web["Euler implícito"])
 
 
 def iniciar_programa_web():
@@ -30,9 +72,9 @@ def iniciar_programa_web():
     def calcular_simulacion(parametros):
         nonlocal parametros_actuales
         if parametros != parametros_actuales:
-            resultado = calcular_trayectoria(dict(parametros, metodo=metodos[parametros['nombre_metodo']]))
+            resultado = calcular_trayectoria(dict(parametros, metodo=metodos_web[parametros['nombre_metodo']]))
             resultados_actuales.clear()
-            resultados_actuales.update(parametros, metodo=metodos[parametros['nombre_metodo']])
+            resultados_actuales.update(parametros, metodo=metodos_web[parametros['nombre_metodo']])
             resultados_actuales.update(resultado)
             # Periodo de la polhoda sin cancelaciones: cerca de la separatriz la v1 lo da como infinito.
             resultados_actuales['movimiento'].update(periodo_polhoda_web(parametros['I'], resultado['U'][0, :3]))
@@ -48,7 +90,7 @@ def iniciar_programa_web():
     def preparar_pagina(numero_pagina, tf_estudio):
         if numero_pagina in (0, 1, 2):
             if 'comparacion_metodos' not in resultados_actuales:
-                resultados_actuales['comparacion_metodos'] = comparar_metodos(resultados_actuales)
+                resultados_actuales['comparacion_metodos'] = comparar_metodos_web(resultados_actuales)
             if numero_pagina == 0:
                 # Página de movimiento: los tres integradores a la vez (solo web).
                 if 'fantasmas' not in resultados_actuales:
@@ -59,29 +101,101 @@ def iniciar_programa_web():
                 if 'apoyo_comparacion' not in resultados_actuales:
                     resultados_actuales['apoyo_comparacion'] = preparar_apoyo_comparacion(
                         resultados_actuales, resultados_actuales['comparacion_metodos'])
-                    # Volteos de cada esquema (solo web): instantes en que ω del eje inicial cambia de signo.
-                    resultados_actuales['volteos_metodos'] = {
-                        nombre: instantes_cambio_signo(r['t'], r['U'][:, resultados_actuales['eje']])
-                        for nombre, r in resultados_actuales['comparacion_metodos'].items()}
                 return dict(comparacion_metodos=resultados_actuales['comparacion_metodos'],
-                            apoyo_comparacion=resultados_actuales['apoyo_comparacion'],
-                            volteos_metodos=resultados_actuales['volteos_metodos'])
+                            apoyo_comparacion=resultados_actuales['apoyo_comparacion'])
             if 'estabilidad' not in resultados_actuales:
-                resultados_actuales['estabilidad'] = preparar_datos_estabilidad(resultados_actuales, resultados_actuales['comparacion_metodos'])
+                resultados_actuales['estabilidad'] = preparar_datos_estabilidad_web(resultados_actuales, resultados_actuales['comparacion_metodos'])
             return dict(estabilidad=resultados_actuales['estabilidad'])
         if numero_pagina == 3:
             if tf_estudio not in estudios_error:
-                estudios_error[tf_estudio] = calcular_estudio_error(resultados_actuales, tf_estudio)
+                estudios_error[tf_estudio] = calcular_estudio_error_web(resultados_actuales, tf_estudio)
             return dict(estudio_error=estudios_error[tf_estudio])
         return {}
 
-    interfaz = crear_interfaz_web(list(metodos), calcular_simulacion, preparar_pagina)
+    interfaz = crear_interfaz_web(list(metodos_web), calcular_simulacion, preparar_pagina)
     # La GUI avisa antes de calcular si el paso fijo superaría el límite de pasos de PEI1.py.
     interfaz['configuracion']['limite_pasos'] = {
-        nombre: limite_pasos['lento' if metodo in metodos_implicitos else 'rapido'] for nombre, metodo in metodos.items()}
+        nombre: limite_pasos['lento' if metodo in principal.metodos_implicitos else 'rapido'] for nombre, metodo in metodos_web.items()}
+    # Orden teórico de cada esquema: la explicación de Richardson lo compara con el medido.
+    interfaz['configuracion']['ordenes'] = {nombre: metodo.order for nombre, metodo in metodos_web.items()}
     # Aquí se inicia el primer cálculo, una vez construida la interfaz.
     interfaz['solicitar_calculo']()
     return interfaz
+
+
+def comparar_metodos_web(datos):
+    """comparar_metodos de PEI1.py (sus tres esquemas) más los de la web, con el mismo Δt o la misma tolerancia."""
+    comparacion = comparar_metodos(datos)
+    for nombre, metodo in metodos_extra.items():
+        if metodo is datos['metodo']:
+            (t, U), aviso = datos['solucion_completa'], datos['aviso']
+        else:
+            t, U, aviso = integrar_trayectoria(Rigid_body_problem(datos['I']), datos['tf'],
+                Initial_condition(datos['eje'], datos['Omega'], datos['eps']), metodo, datos['dt'],
+                datos['adaptativo'], datos['tol'])
+        comparacion[nombre] = dict(t=t, U=U, aviso=aviso, derivas=calcular_derivas(U, datos['I']))
+    return {nombre: comparacion[nombre] for nombre in metodos_web}
+
+
+def preparar_datos_estabilidad_web(datos, comparacion):
+    """preparar_datos_estabilidad de PEI1.py completado con los esquemas de la web.
+
+    PEI1.py prepara los tres esquemas del enunciado y colorea la ampliación del elegido; si el elegido es
+    uno de la web, se le pasa Euler y después se rehace ese mapa. La región completa de los esquemas de la
+    web llega hasta Re z = 2.4: la del Euler implícito es el exterior del círculo |z − 1| = 1.
+    """
+    elegido = datos['nombre_metodo']
+    estabilidad = preparar_datos_estabilidad(dict(datos, nombre_metodo=elegido if elegido in metodos else "Euler"), comparacion)
+    radio = estabilidad['radio']
+    for nombre in metodos_extra:
+        esquema = nombres_estabilidad_web[nombre]
+        estabilidad['regiones_completas'][nombre] = stability_region(esquema, linspace(-3.4, 2.4, 320), linspace(-3.2, 3.2, 300))
+        estabilidad['regiones_ampliadas'][nombre] = stability_region(esquema, linspace(-radio, radio, 241), linspace(-radio, radio, 241))
+    if elegido in metodos_extra:
+        X, Y, A = estabilidad['regiones_ampliadas'][elegido]
+        with errstate(divide="ignore", invalid="ignore"):
+            estabilidad['color_ampliacion'] = (X, Y, log(A) - X)
+    # La web ya no dibuja |R(iy)| y presenta la tabla de predicción como tabla, con los cuatro esquemas.
+    for clave in ('tabla', 'eje_imaginario', 'curvas_eje_imaginario'):
+        estabilidad.pop(clave, None)
+    estabilidad['prediccion'] = preparar_tabla_prediccion(estabilidad['autovalores_iniciales'][0][0], comparacion)
+    return estabilidad
+
+
+def preparar_tabla_prediccion(z, comparacion):
+    """Las cifras de la tabla de texto de preparar_datos_estabilidad, en filas y para los cuatro esquemas.
+
+    En el equilibrio, |R(z)| frente a |e^z|. En el cuaternión, |q(tf)| − 1 predicho por la cinemática
+    (cada paso multiplica |q| por |R(i|ω|Δt/2)|) frente al de la simulación.
+    """
+    filas = []
+    for nombre, esquema in nombres_estabilidad_web.items():
+        t, U = comparacion[nombre]['t'], comparacion[nombre]['U']
+        fila = dict(nombre=nombre, R=abs(stability_function(esquema, z)), exacta=abs(exp(z)), prediccion=None, simulacion=None)
+        if len(t) >= 2:
+            w = norm(U[:-1, :3], axis=1)
+            fila.update(prediccion=prod(abs(stability_function(esquema, .5j*w*(t[1:] - t[:-1])))) - 1,
+                        simulacion=norm(U[-1, 3:7]) - 1)
+        filas.append(fila)
+    return dict(z=z, filas=filas)
+
+
+def calcular_estudio_error_web(datos, tf):
+    """calcular_estudio_error de PEI1.py más la curva de convergencia de los esquemas de la web."""
+    inicio = time.perf_counter()
+    estudio = calcular_estudio_error(datos, tf)
+    F = Rigid_body_problem(datos['I'])
+    U0 = Initial_condition(datos['eje'], datos['Omega'], datos['eps'])
+    curvas = estudio['curvas_convergencia']
+    for nombre, metodo in metodos_extra.items():
+        N, D = curva_convergencia(F, tf, U0, metodo, N0=40, niveles=niveles_convergencia_web[nombre])
+        indices_ajuste, pendiente, b = tramo_recto(N, D)
+        with errstate(invalid="ignore", divide="ignore"):
+            ordenes = ordenes_locales(D)
+        curvas[nombre] = dict(N=N, D=D, indices_ajuste=indices_ajuste, pendiente=pendiente, b=b, ordenes=ordenes)
+    estudio['curvas_convergencia'] = {nombre: curvas[nombre] for nombre in metodos_web}
+    estudio['tiempo_calculo'] = time.perf_counter() - inicio
+    return estudio
 
 
 def preparar_datos_web(datos):
@@ -146,7 +260,7 @@ def calcular_familia_polhodas(I, L2, niveles=4):
             periodo = Polhode_period(I, Kinetic_energy_2T(w0, I), L2)
             if not isfinite(periodo):
                 continue
-            _, W, _ = integrar_trayectoria(F, periodo, w0, metodos['RK4'], periodo/240)
+            _, W, _ = integrar_trayectoria(F, periodo, w0, metodos_web['RK4'], periodo/240)
             curvas += [W, -W]
     return curvas
 

@@ -17,12 +17,13 @@ const estado = {
 const formulario = {};                // valores actuales de los controles
 const entradas = {};                  // elementos de cada control, para escribir en ellos
 const paginas = [];
-const nombresCortos = { 'Euler': 'Euler', 'Crank-Nicolson': 'CN', 'RK4': 'RK4' };
+const nombresCortos = { 'Euler': 'Euler', 'Euler implícito': 'Impl. Euler', 'Crank-Nicolson': 'CN', 'RK4': 'RK4' };
+const nombresBotones = { 'Euler': 'Euler', 'Euler implícito': 'Implicit Euler', 'Crank-Nicolson': 'Crank–Nicolson', 'RK4': 'RK4' };
 const velocidades = [.25, .5, 1, 2, 4, 8];
 const pasosLargos = 20000;            // a partir de aquí el cálculo tarda varios segundos
 const atajos = [['Space', 'Play / pause'], ['← →', 'Step through time'], ['1 – 4', 'Pages'], ['↵', 'Compute'],
   ['A', 'Cycle initial spin axis'], ['↑ ↓', 'Cycle integrator'], ['M', 'Fixed / adaptive step'], ['+ −', 'Playback speed'],
-  ['B', 'Cycle body shape'], ['O', 'Body / Poinsot view'], ['C', 'Compare the three integrators'], ['V', 'Reset cameras'], ['G', 'Record the 3D view (.webm)'],
+  ['B', 'Cycle body shape'], ['O', 'Body / Poinsot view'], ['C', 'Compare all integrators'], ['V', 'Reset cameras'], ['G', 'Record the 3D view (.webm)'],
   ['R', 'Reset parameters'], ['P', 'Presentation mode'], ['T', 'Projector theme'], ['F', 'Full screen'], ['?', 'This help']];
 
 // ------------------------------------------------------------ 1. ACCIONES
@@ -123,7 +124,7 @@ function recibirResultado(datos, parametros) {
   estado.tiempo = 0;
   for (const pagina of paginas) pagina.necesitaDibujo = true;
   $('#resumen').classList.remove('error');
-  $('#resumen').innerHTML = `${datos.nombre_metodo} · ${datos.pasos.toLocaleString('en')} steps · ${datos.tiempo_calculo.toFixed(2)} s`
+  $('#resumen').innerHTML = `${nombresBotones[datos.nombre_metodo] ?? datos.nombre_metodo} · ${datos.pasos.toLocaleString('en')} steps · ${datos.tiempo_calculo.toFixed(2)} s`
     + (datos.avisos.length ? `<br><span style="color:var(--aviso)">${datos.avisos.join(' · ')}</span>` : '');
   for (const texto of datos.avisos) aviso(texto);
   estado.resumenCalculo = `${nombresCortos[datos.nombre_metodo]} · ${datos.pasos.toLocaleString('en')} steps · ${datos.tiempo_calculo.toFixed(2)} s`;
@@ -138,7 +139,7 @@ function recibirResultado(datos, parametros) {
 async function pedirPagina(numero) {
   const clave = numero === 3 ? `3:${estado.tfEstudio}` : String(numero);
   if (estado.datosPagina[clave]) return estado.datosPagina[clave];
-  mostrarOcupado(numero === 0 ? 'Integrating the three schemes…' : 'Preparing view…');
+  mostrarOcupado(numero === 0 ? 'Integrating every scheme…' : 'Preparing view…');
   const datos = await pedir('/api/pagina', { numero, tf_estudio: estado.tfEstudio });
   mostrarOcupado(datos.error ? 'Error in this view' : estado.resumenCalculo ?? 'Ready', false, !!datos.error);
   if (datos.error) { aviso(datos.error, true); return null; }
@@ -265,7 +266,9 @@ function crearControles() {
   crearCampo($('#controles-tiempo'), 'eps');
   crearDeslizador($('#controles-tiempo'), 'dt', { logaritmico: true });
   crearDeslizador($('#controles-tiempo'), 'tf');
-  crearSegmentado($('#controles-integracion'), 'metodo', nombres_metodos.map(n => [n, n === 'Crank-Nicolson' ? 'Crank–Nicolson' : n]));
+  // Cuatro esquemas: en dos columnas para que quepan los nombres completos.
+  crearSegmentado($('#controles-integracion'), 'metodo', nombres_metodos.map(n => [n, nombresBotones[n] ?? n]))
+    .classList.toggle('dos-columnas', nombres_metodos.length > 3);
   const tolerancia = crearCampo($('#controles-integracion'), 'tol');
   crearSegmentado($('#controles-integracion'), 'adaptativo', [[false, 'Fixed step'], [true, 'Adaptive']],
     { alCambiar: (v) => tolerancia.classList.toggle('oculto', !v) });
@@ -496,7 +499,7 @@ async function iniciar() {
   if (inicio.resultado) recibirResultado(inicio.resultado, inicio.parametros);
   else mostrarPagina(0);
   const r = estado.resultado;
-  $('#bienvenida-carga').textContent = r ? `Ready · ${r.nombre_metodo} · ${r.pasos.toLocaleString('en')} steps in ${r.tiempo_calculo.toFixed(2)} s` : '';
+  $('#bienvenida-carga').textContent = r ? `Ready · ${nombresBotones[r.nombre_metodo] ?? r.nombre_metodo} · ${r.pasos.toLocaleString('en')} steps in ${r.tiempo_calculo.toFixed(2)} s` : '';
   if (new URLSearchParams(location.search).has('directo')) entrar();
   requestAnimationFrame(avanzarAnimacion);
 }

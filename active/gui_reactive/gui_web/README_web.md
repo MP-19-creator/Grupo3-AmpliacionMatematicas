@@ -34,9 +34,9 @@ Python calcula y envía los resultados en JSON. El navegador no calcula nada: di
 - la herpolhoda, R(q)·ω;
 - el plano invariable, a distancia 2T/|L|;
 - la familia de polhodas, integrada con RK4;
-- la orientación de los tres integradores a la vez;
-- el periodo de la polhoda sin cancelaciones (`periodo_polhoda_web`). `Polhode_period` redondea C = L² − 2T·I₂ a 12 cifras y con ε ≲ 10⁻⁶ lo toma por la separatriz (P = ∞). Aquí cada diferencia es una suma de términos del mismo signo y K se evalúa con el módulo complementario. Con ε = 10⁻⁷ da P/2 = 59,4 s, frente a 59,6 s simulados. Donde la v1 es válida, coincide con ella;
-- los instantes de volteo de cada esquema (`instantes_cambio_signo` de la v1), para la tabla «Flips per scheme» de Invariantes en el eje intermedio.
+- la orientación de todos los integradores a la vez;
+- el **Euler implícito** (orden 1), con el mismo flujo que los tres esquemas del enunciado: selector, comparación de derivas, fantasmas 3D, regiones de estabilidad, tabla de predicción y estudio de convergencia. Se importa `Euler_implicit` de `temporal_schemes`; como `Newton` (en `NewtonRaphson.py`) aún no admite el Jacobiano, mientras tanto se usa `paso_euler_implicito`, el mismo patrón que `paso_crank_nicolson` en `PEI1.py`. Tiene el límite de pasos de los implícitos (30 000). Las funciones de `PEI1.py` se envuelven (`comparar_metodos_web`, `preparar_datos_estabilidad_web`, `calcular_estudio_error_web`), no se copian;
+- el periodo de la polhoda sin cancelaciones (`periodo_polhoda_web`). `Polhode_period` redondea C = L² − 2T·I₂ a 12 cifras y con ε ≲ 10⁻⁶ lo toma por la separatriz (P = ∞). Aquí cada diferencia es una suma de términos del mismo signo y K se evalúa con el módulo complementario. Con ε = 10⁻⁷ da P/2 = 59,4 s, frente a 59,6 s simulados. Donde la v1 es válida, coincide con ella.
 
 `gui_web.py` solo reduce lo que envía, sin cambiar ningún valor: submuestrea las series largas a 2000 puntos, como hacen las páginas de la v1 al dibujar, y de las mallas de estabilidad envía solo sus ejes, porque las filas de `meshgrid` se repiten. También traduce al inglés los avisos que la v1 escribe en español (`traducciones`).
 
@@ -54,8 +54,8 @@ Todo ello usa funciones de física que ya existían.
 | `gui_web/style_web.css` | `style.py` | Paleta, tipografía, tema oscuro y claro |
 | `gui_web/gui_web.js` | `gui.py` (parte navegador) | Controles, reloj común, pestañas, teclado |
 | `gui_web/page_attitude_web.js` | `page_attitude.py` | Página 1: actitud, Poinsot, espacio de fases |
-| `gui_web/page_invariants_web.js` | `page_invariants.py` | Página 2: derivas de 2T, L² y \|q\| y trayectorias transversales |
-| `gui_web/page_stability_web.js` | `page_stability.py` | Página 3: regiones \|R(z)\| ≤ 1, autovalores y modo test |
+| `gui_web/page_invariants_web.js` | `page_invariants.py` | Página 2: derivas de 2T y L² y trayectorias transversales |
+| `gui_web/page_stability_web.js` | `page_stability.py` | Página 3: regiones \|R(z)\| ≤ 1 (ejes a la misma escala), autovalores, tabla de predicción y modo test |
 | `gui_web/page_richardson_web.js` | `page_richardson.py` | Página 4: convergencia y estimación de Richardson |
 | `gui_web/graficas_web.js` | `preparar_grafica`, `poner_leyenda` | Estilo común de las gráficas Plotly y cursor del instante actual |
 | `gui_web/escena_web.js` | ayudas de `style.py` | Piezas 3D comunes: visor, estelas, flechas, elipsoides |
@@ -76,7 +76,7 @@ Para quitar la versión web basta con borrar `PEI1_web.py`, `gui_web.py` y la ca
 | ↵ | Calcular |
 | O | Vista del cuerpo / Poinsot |
 | B | Forma del cuerpo |
-| C | Los tres integradores |
+| C | Todos los integradores |
 | P | Modo presentación |
 | T | Tema claro para el proyector |
 | F | Pantalla completa |
