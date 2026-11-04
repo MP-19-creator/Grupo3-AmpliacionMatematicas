@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from numpy import (array, arcsin, clip, cos, diff, einsum, errstate, exp, eye, isfinite, linspace, log, nan, pi, prod,
     searchsorted, sin, sqrt, ceil, arange, argmin, interp, unwrap, angle)
 from numpy.linalg import norm, solve, LinAlgError
-from active.gui_reactive.gui_web import crear_interfaz_web
+from active.gui_reactive.gui import crear_interfaz_web
 from active.numerical_engine.temporal_schemes import Euler, Euler_implicit, RK4, Crank_Nicolson
 from active.numerical_engine.NewtonRaphson import Newton, Newton_failed
 from active.numerical_engine.Estabilidad import stability_region, stability_function
@@ -341,7 +341,6 @@ metodos_implicitos = (*metodos_implicitos, metodos_web["Euler implícito"])
 
 
 def iniciar_programa_web():
-    """Misma estructura que iniciar_programa() de PEI1.py; cambia solo la GUI que se crea."""
     resultados_actuales = {}
     parametros_actuales = None
     estudios_error = {}

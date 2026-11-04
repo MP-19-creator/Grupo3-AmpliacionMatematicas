@@ -1,5 +1,5 @@
 from active.numerical_engine.Errores_Convergencia import partition, error_richardson, orden_convergencia
-from active.numerical_engine.Temporal_Schemes import Euler, Euler_implicit, Crank_Nicolson, RK4
+from active.numerical_engine.temporal_schemes import Euler, Euler_implicit, Crank_Nicolson, RK4
 from active.space_physics.oscilador import oscilador
 from numpy import array, zeros, pi, log10, polyfit
 from numpy.linalg import norm
@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 def PruebaError(tf, N, U0, F):
     t = partition(0, tf, N)
-    schemes = [(Euler, 1), (Euler_implicit, 1), (Crank_Nicolson, 2), (RK4, 4)]
+    # schemes = [(Euler, 1), (Euler_implicit, 1), (Crank_Nicolson, 2), (RK4, 4)]
+    schemes = [(Euler, 1), (RK4, 4)]
     plt.figure()
 
     for method, orden in schemes:
@@ -29,7 +30,8 @@ def PruebaError(tf, N, U0, F):
 
 def PruebaConvergencia(tf, N, U0, F, refinamientos=10, inicio=4, fin=8):
     t = partition(0, tf, N)
-    schemes = [(Euler, 1), (Euler_implicit, 1), (Crank_Nicolson, 2), (RK4, 4)]
+    # schemes = [(Euler, 1), (Euler_implicit, 1), (Crank_Nicolson, 2), (RK4, 4)]
+    schemes = [(Euler, 1), (RK4, 4)]
     plt.figure(figsize=(11, 8))
 
     for i, (method, orden) in enumerate(schemes):

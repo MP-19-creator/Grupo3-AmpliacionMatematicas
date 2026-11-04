@@ -1,4 +1,4 @@
-from active.numerical_engine.Temporal_Schemes import Euler, RK4, Crank_Nicolson, Euler_implicit, Leap_Frog
+from active.numerical_engine.temporal_schemes import Euler, RK4, Crank_Nicolson, Euler_implicit
 from active.space_physics.kepler import Kepler
 from active.numerical_engine.Cauchy_Problem import Cauchy_problem
 from active.numerical_engine.Errores_Convergencia import partition
@@ -7,7 +7,7 @@ from numpy import array, cos, sin, pi
 
 def PruebaCauchy(tf, N, U0): 
    t = partition(0, tf, N)
-   schemes = [Leap_Frog, Euler, RK4, Crank_Nicolson, Euler_implicit]
+   schemes = [Euler, RK4, Crank_Nicolson, Euler_implicit]
 
    for method in schemes:
       U =  Cauchy_problem(Kepler, t, U0, method) 
